@@ -16,27 +16,27 @@ SdFile file;
 
 Draw d;
 
-void connectWifi()
-{
+// void connectWifi()
+// {
 
-  int ConnectCount = 20;
+//   int ConnectCount = 20;
 
-  if (WiFi.status() != WL_CONNECTED)
-  {
-    while (WiFi.status() != WL_CONNECTED)
-    {
-      if (ConnectCount++ == 20)
-      {
-        Serial.println("Connect WiFi");
-        WiFi.begin(globals::ssid, globals::password);
-        Serial.println("Connecting.");
-        ConnectCount = 0;
-      }
-      Serial.print(".");
-      delay(1000);
-    }
-  }
-}
+//   if (WiFi.status() != WL_CONNECTED)
+//   {
+//     while (WiFi.status() != WL_CONNECTED)
+//     {
+//       if (ConnectCount++ == 20)
+//       {
+//         Serial.println("Connect WiFi");
+//         WiFi.begin(globals::ssid, globals::password);
+//         Serial.println("Connecting.");
+//         ConnectCount = 0;
+//       }
+//       Serial.print(".");
+//       delay(1000);
+//     }
+//   }
+// }
 
 void setup()
 {
@@ -44,30 +44,33 @@ void setup()
   display.begin();        // Init Inkplate library (you should call this function ONLY ONCE)
   display.clearDisplay(); // Clear frame buffer of display
 
-  if (!display.rtcGetSecond())
-  {
-    connectWifi();
+  // if (!display.rtcGetSecond())
+  // {
+  //   connectWifi();
 
-    configTime(globals::gmtOffset_sec, globals::daylightOffset_sec, globals::ntpServer);
+  //   configTime(globals::gmtOffset_sec, globals::daylightOffset_sec, globals::ntpServer);
 
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo))
-    {
-      Serial.println("Failed to obtain time");
-      // return;
-    }
+  //   struct tm timeinfo;
+  //   if (!getLocalTime(&timeinfo))
+  //   {
+  //     Serial.println("Failed to obtain time");
+  //     // return;
+  //   }
 
-    WiFi.disconnect();
-    // display.rtcSetTime(timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);                               // Send time to RTC
-    display.rtcSetDate(timeinfo.tm_wday, timeinfo.tm_mday, timeinfo.tm_mon, timeinfo.tm_year + 1900); // Send date to RTC
-  }
+  //   WiFi.disconnect();
+  //   // display.rtcSetTime(timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);                               // Send time to RTC
+  //   display.rtcSetDate(timeinfo.tm_wday, timeinfo.tm_mday, timeinfo.tm_mon, timeinfo.tm_year + 1900); // Send date to RTC
+  // }
 
-  display.rtcGetRtcData();
+  // display.rtcGetRtcData();
+
+  // d.update(display);
+
+  display.joinAP(globals::ssid, globals::password);
+
   d.update(display);
-
   // Serial.println(display.readBattery());
   // Serial.println(display.readTemperature(), DEC);
-
   // DO NOT DELETE
   esp_sleep_enable_timer_wakeup(globals::TIME_TO_SLEEP * globals::uS_TO_S_FACTOR); // Activate wake-up timer
   esp_deep_sleep_start();                                                          // Put ESP32 into deep sleep. Program stops here.
