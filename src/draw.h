@@ -18,71 +18,23 @@ class Draw
 {
 
 public:
-    void update(Inkplate &d, WiFiManager &wm, const char *value)
+    void update(Inkplate &d, const char *serverAddress)
     {
-        Serial.println("------v");
-        // Serial.println(serverAddress);
-        Serial.println("------^");
-
-        d.setTextSize(3);
-        d.setTextColor(0, 7);
-        d.setCursor(100, 360);
-
-        // WiFi.mode(WIFI_MODE_STA);
-        // WiFi.begin(wm.getWiFiSSID().c_str(), wm.getWiFiPass().c_str());
-        while (WiFi.status() != WL_CONNECTED)
-        {
-            delay(500);
-            Serial.print(".");
-            d.partialUpdate();
-        }
-        Serial.println("\nWiFi OK! Downloading...");
-
-        Serial.println("connected");
-        Serial.println("value:");
-        Serial.print(value);
-
-        // if (!d.drawImage("http://192.168.0.97:3000", 0, 100, true, false))
-        delay(5000);
+        Serial.println("starting delay");
+        delay(20000);
         Serial.println("delay done");
-        if (!d.drawImage("http://192.168.0.97:3000", d.PNG, 0, 0))
+        Serial.println(String(serverAddress));
+
+        if (!d.drawImage(String(serverAddress), d.PNG, 0, 0))
         {
+            d.setTextSize(3);
+            d.setTextColor(0, 7);
+            d.setCursor(100, 360);
             d.println("Image open error");
+            d.setCursor(100, 390);
+            d.println(serverAddress);
         }
         d.display();
-
-        // if (!canDrawImage)
-        // {
-        //     d.setTextSize(3);
-        //     d.setTextColor(0, 7);
-        //     d.setCursor(100, 360);
-        //     d.println("Can't connect to the server attempting to connect to ");
-        //     d.setCursor(100, 390);
-        //     d.println(serverAddress);
-        // }
-
-        d.display();
-
-        /* if (globals::refreshIndex == 0)
-        {
-            drawImage(d);
-        }
-        else if (globals::refreshIndex == 1)
-        {
-            drawBoxes(d);
-        }
-        else if (globals::refreshIndex == 2)
-        {
-            drawRedditPosts(d);
-        }
-
-        d.display();
-        globals::refreshIndex++;
-
-        if (globals::refreshIndex > 2)
-        {
-            globals::refreshIndex = 0;
-        } */
     }
 
 private:

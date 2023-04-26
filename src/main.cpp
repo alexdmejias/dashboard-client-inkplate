@@ -16,34 +16,34 @@
 #include <DNSServer.h>
 #include <WiFiManager.h>
 
-Inkplate display(INKPLATE_3BIT); // Create an object on Inkplate library and also set library into 1 Bit mode (BW)
+Inkplate display(INKPLATE_3BIT);
 SdFile file;
 Draw d;
 WiFiManager wm;
 
-char mqtt_server[34] = "YOUR_API_TOKEN";
-WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 34);
+char image_server[34] = "http://192.168.0.97:3000";
+WiFiManagerParameter custom_image_server("server", "image server", image_server, 34);
 
-void configModeCallback(WiFiManager *myWiFiManager)
-{
-  Serial.println("Entered config mode");
-  Serial.println(WiFi.softAPIP());
+// void configModeCallback(WiFiManager *myWiFiManager)
+// {
+//   Serial.println("Entered config mode");
+//   Serial.println(WiFi.softAPIP());
 
-  Serial.println(myWiFiManager->getConfigPortalSSID());
-  // display.setTextSize(3);
-  // display.setTextColor(0, 7);
-  // display.setCursor(100, 360);
-  // display.println("in config mode");
-}
+//   Serial.println(myWiFiManager->getConfigPortalSSID());
+//   // display.setTextSize(3);
+//   // display.setTextColor(0, 7);
+//   // display.setCursor(100, 360);
+//   // display.println("in config mode");
+// }
 
-void saveConfigCallback()
-{
-  Serial.println("Should save config");
-  Serial.println("Get Params:");
-  Serial.print(custom_mqtt_server.getID());
-  Serial.print(" : ");
-  Serial.println(custom_mqtt_server.getValue());
-}
+// void saveConfigCallback()
+// {
+//   Serial.println("Should save config");
+//   Serial.println("Get Params:");
+//   Serial.print(custom_mqtt_server.getID());
+//   Serial.print(" : ");
+//   Serial.println(custom_mqtt_server.getValue());
+// }
 
 void setup()
 {
@@ -55,13 +55,13 @@ void setup()
   // these are stored by the esp library
   wm.resetSettings();
 
-  wm.addParameter(&custom_mqtt_server);
+  wm.addParameter(&custom_image_server);
 
   bool res;
   // res = wm.autoConnect(); // auto generated AP name from chipid
   // res = wm.autoConnect("AutoConnectAP"); // anonymous ap
-  wm.setAPCallback(configModeCallback);
-  wm.setSaveConfigCallback(saveConfigCallback);
+  // wm.setAPCallback(configModeCallback);
+  // wm.setSaveConfigCallback(saveConfigCallback);
   res = wm.autoConnect("AutoConnectAP"); // password protected ap
 
   if (!res)
@@ -73,13 +73,8 @@ void setup()
   {
     // if you get here you have connected to the WiFi
     Serial.println("connected...yeey :)");
-    Serial.println(custom_mqtt_server.getValue());
-    Serial.println(custom_mqtt_server.getValue());
-    Serial.println(custom_mqtt_server.getValue());
-    Serial.println(custom_mqtt_server.getValue());
-    Serial.println(custom_mqtt_server.getValue());
-    // d.update(display, custom_mqtt_server.getValue());
-    d.update(display, wm, custom_mqtt_server.getValue());
+
+    d.update(display, custom_image_server.getValue());
   }
 
   // if (!display.rtcGetSecond())
