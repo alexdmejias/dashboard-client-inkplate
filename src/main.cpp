@@ -11,38 +11,76 @@
 #include "draw.h"
 // #include "network.h"
 
+#include <Update.h>
+#include <WebServer.h>
+#include <DNSServer.h>
+#include <WiFiManager.h>
+
 Inkplate display(INKPLATE_3BIT); // Create an object on Inkplate library and also set library into 1 Bit mode (BW)
 SdFile file;
-
 Draw d;
+WiFiManager wm;
 
-// void connectWifi()
-// {
+char mqtt_server[34] = "YOUR_API_TOKEN";
+WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 34);
 
-//   int ConnectCount = 20;
+void configModeCallback(WiFiManager *myWiFiManager)
+{
+  Serial.println("Entered config mode");
+  Serial.println(WiFi.softAPIP());
 
-//   if (WiFi.status() != WL_CONNECTED)
-//   {
-//     while (WiFi.status() != WL_CONNECTED)
-//     {
-//       if (ConnectCount++ == 20)
-//       {
-//         Serial.println("Connect WiFi");
-//         WiFi.begin(globals::ssid, globals::password);
-//         Serial.println("Connecting.");
-//         ConnectCount = 0;
-//       }
-//       Serial.print(".");
-//       delay(1000);
-//     }
-//   }
-// }
+  Serial.println(myWiFiManager->getConfigPortalSSID());
+  // display.setTextSize(3);
+  // display.setTextColor(0, 7);
+  // display.setCursor(100, 360);
+  // display.println("in config mode");
+}
+
+void saveConfigCallback()
+{
+  Serial.println("Should save config");
+  Serial.println("Get Params:");
+  Serial.print(custom_mqtt_server.getID());
+  Serial.print(" : ");
+  Serial.println(custom_mqtt_server.getValue());
+}
 
 void setup()
 {
   Serial.begin(115200);
   display.begin();        // Init Inkplate library (you should call this function ONLY ONCE)
   display.clearDisplay(); // Clear frame buffer of display
+  Serial.setDebugOutput(true);
+  // reset settings - wipe stored credentials for testing
+  // these are stored by the esp library
+  wm.resetSettings();
+
+  wm.addParameter(&custom_mqtt_server);
+
+  bool res;
+  // res = wm.autoConnect(); // auto generated AP name from chipid
+  // res = wm.autoConnect("AutoConnectAP"); // anonymous ap
+  wm.setAPCallback(configModeCallback);
+  wm.setSaveConfigCallback(saveConfigCallback);
+  res = wm.autoConnect("AutoConnectAP"); // password protected ap
+
+  if (!res)
+  {
+    Serial.println("Failed to connect");
+    // ESP.restart();
+  }
+  else
+  {
+    // if you get here you have connected to the WiFi
+    Serial.println("connected...yeey :)");
+    Serial.println(custom_mqtt_server.getValue());
+    Serial.println(custom_mqtt_server.getValue());
+    Serial.println(custom_mqtt_server.getValue());
+    Serial.println(custom_mqtt_server.getValue());
+    Serial.println(custom_mqtt_server.getValue());
+    // d.update(display, custom_mqtt_server.getValue());
+    d.update(display, wm, custom_mqtt_server.getValue());
+  }
 
   // if (!display.rtcGetSecond())
   // {
@@ -66,14 +104,13 @@ void setup()
 
   // d.update(display);
 
-  display.joinAP(globals::ssid, globals::password);
+  // display.joinAP(globals::ssid, globals::password);
 
-  d.update(display);
-  // Serial.println(display.readBattery());
-  // Serial.println(display.readTemperature(), DEC);
+  // d.update(display, custom_mqtt_server.getValue());
+
   // DO NOT DELETE
-  esp_sleep_enable_timer_wakeup(globals::TIME_TO_SLEEP * globals::uS_TO_S_FACTOR); // Activate wake-up timer
-  esp_deep_sleep_start();                                                          // Put ESP32 into deep sleep. Program stops here.
+  // esp_sleep_enable_timer_wakeup(globals::TIME_TO_SLEEP * globals::uS_TO_S_FACTOR); // Activate wake-up timer
+  // esp_deep_sleep_start();                                                          // Put ESP32 into deep sleep. Program stops here.
 
   Serial.println("End setup");
 }

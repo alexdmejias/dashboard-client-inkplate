@@ -8,6 +8,7 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
+#include <WiFiManager.h>
 
 #include "network.h"
 
@@ -17,19 +18,48 @@ class Draw
 {
 
 public:
-    void update(Inkplate &d)
+    void update(Inkplate &d, WiFiManager &wm, const char *value)
     {
-        bool canDrawImage = d.drawImage(globals::serverAddress, d.PNG, 0, 0);
+        Serial.println("------v");
+        // Serial.println(serverAddress);
+        Serial.println("------^");
 
-        if (!canDrawImage)
+        d.setTextSize(3);
+        d.setTextColor(0, 7);
+        d.setCursor(100, 360);
+
+        // WiFi.mode(WIFI_MODE_STA);
+        // WiFi.begin(wm.getWiFiSSID().c_str(), wm.getWiFiPass().c_str());
+        while (WiFi.status() != WL_CONNECTED)
         {
-            d.setTextSize(3);
-            d.setTextColor(0, 7);
-            d.setCursor(100, 360);
-            d.println("Can't connect to the server attempting to connect to ");
-            d.setCursor(100, 390);
-            d.println(globals::serverAddress);
+            delay(500);
+            Serial.print(".");
+            d.partialUpdate();
         }
+        Serial.println("\nWiFi OK! Downloading...");
+
+        Serial.println("connected");
+        Serial.println("value:");
+        Serial.print(value);
+
+        // if (!d.drawImage("http://192.168.0.97:3000", 0, 100, true, false))
+        delay(5000);
+        Serial.println("delay done");
+        if (!d.drawImage("http://192.168.0.97:3000", d.PNG, 0, 0))
+        {
+            d.println("Image open error");
+        }
+        d.display();
+
+        // if (!canDrawImage)
+        // {
+        //     d.setTextSize(3);
+        //     d.setTextColor(0, 7);
+        //     d.setCursor(100, 360);
+        //     d.println("Can't connect to the server attempting to connect to ");
+        //     d.setCursor(100, 390);
+        //     d.println(serverAddress);
+        // }
 
         d.display();
 

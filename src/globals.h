@@ -9,7 +9,7 @@ namespace globals
     uint8_t TIME_TO_SLEEP = 10;   // How long ESP32 will be in deep sleep (in seconds)
     RTC_DATA_ATTR int imageIndex = 0;
     RTC_DATA_ATTR int refreshIndex = 0;
-    char serverAddress[] = "http://192.168.0.97:3000/wasd";
+    char serverAddress[] = "http://192.168.0.97:3000";
     char baseImageDir[] = "day-images/%i/%i/%i.png";
 
     const char *ssid = ssid_name;
