@@ -14,6 +14,8 @@
 
 Network network;
 
+// void save_settings();
+
 class Draw
 {
 
@@ -24,6 +26,24 @@ public:
         delay(20000);
         Serial.println("delay done");
         Serial.println(String(serverAddress));
+
+        HTTPClient http;
+
+        Serial.println("[HTTP] begin...\n");
+
+        http.begin("http://example.com/index.html"); // HTTP
+
+        Serial.println("[HTTP] GET...\n");
+        // start connection and send HTTP header
+
+        char targetHeaderName[] = "Content-Type";
+        const char *headerKeys[] = {targetHeaderName};
+        const size_t headerKeysCount = sizeof(headerKeys) / sizeof(headerKeys[0]);
+        http.collectHeaders(headerKeys, headerKeysCount);
+        int httpResponseCode = http.GET();
+        Serial.println(http.getString());
+        Serial.println(http.headers());
+        Serial.println(http.header(targetHeaderName));
 
         if (!d.drawImage(String(serverAddress), d.PNG, 0, 0))
         {

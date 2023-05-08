@@ -2,8 +2,13 @@
 #error "Wrong board selection for this example, please select Inkplate 10 in the boards menu."
 #endif
 
+#define ESP_DRD_USE_SPIFFS true
+
 #include "Inkplate.h" //Include Inkplate library to the sketch
-#include "SdFat.h"    //Include library for SD card
+// #include "SdFat.h"    //Include library for SD card
+#define FS_NO_GLOBALS
+#include <FS.h>
+#include <SPIFFS.h>
 #include "driver/rtc_io.h"
 #include "Arduino.h"
 
@@ -15,93 +20,193 @@
 #include <WebServer.h>
 #include <DNSServer.h>
 #include <WiFiManager.h>
+// #include <ESP_DoubleResetDetector.h>
+#include <ArduinoJson.h>
+#include <HTTPClient.h>
 
 Inkplate display(INKPLATE_3BIT);
 SdFile file;
 Draw d;
 WiFiManager wm;
 
+// Number of seconds after reset during which a
+// subseqent reset will be considered a double reset.
+#define DRD_TIMEOUT 10
+
+// RTC Memory Address for the DoubleResetDetector to use
+#define DRD_ADDRESS 0
+
+// DoubleResetDetector *drd;
+
 char image_server[34] = "http://192.168.0.97:3000";
+
+const long interval = 5000;
+
+// flag for saving data
+bool shouldSaveConfig = false;
+
 WiFiManagerParameter custom_image_server("server", "image server", image_server, 34);
 
-// void configModeCallback(WiFiManager *myWiFiManager)
-// {
-//   Serial.println("Entered config mode");
-//   Serial.println(WiFi.softAPIP());
-
-//   Serial.println(myWiFiManager->getConfigPortalSSID());
-//   // display.setTextSize(3);
-//   // display.setTextColor(0, 7);
-//   // display.setCursor(100, 360);
-//   // display.println("in config mode");
-// }
-
-// void saveConfigCallback()
-// {
-//   Serial.println("Should save config");
-//   Serial.println("Get Params:");
-//   Serial.print(custom_mqtt_server.getID());
-//   Serial.print(" : ");
-//   Serial.println(custom_mqtt_server.getValue());
-// }
-
-void setup()
+void saveConfigCallback()
 {
-  Serial.begin(115200);
-  display.begin();        // Init Inkplate library (you should call this function ONLY ONCE)
-  display.clearDisplay(); // Clear frame buffer of display
-  Serial.setDebugOutput(true);
-  // reset settings - wipe stored credentials for testing
-  // these are stored by the esp library
-  wm.resetSettings();
+  Serial.println("Should save config");
+  shouldSaveConfig = true;
+}
 
-  wm.addParameter(&custom_image_server);
+void saveConfigFile()
+{
+  DynamicJsonDocument jsonBuffer(1024);
 
-  bool res;
-  // res = wm.autoConnect(); // auto generated AP name from chipid
-  // res = wm.autoConnect("AutoConnectAP"); // anonymous ap
-  // wm.setAPCallback(configModeCallback);
-  // wm.setSaveConfigCallback(saveConfigCallback);
-  res = wm.autoConnect("AutoConnectAP"); // password protected ap
+  jsonBuffer["image_server"] = image_server;
 
-  if (!res)
+  fs::File configFile = SPIFFS.open("/config.json", "w");
+  if (!configFile)
   {
-    Serial.println("Failed to connect");
-    // ESP.restart();
+    Serial.println("failed to open config file for writing");
+  }
+
+  serializeJson(jsonBuffer, Serial);
+  serializeJson(jsonBuffer, configFile);
+
+  configFile.close();
+}
+
+// Loads custom parameters from /config.json on SPIFFS
+bool loadConfigFile()
+{
+  Serial.println("mounting FS...");
+
+  if (SPIFFS.begin())
+  {
+    Serial.println("mounted file system");
+    if (SPIFFS.exists("/config.json"))
+    {
+      // file exists, reading and loading
+      Serial.println("reading config file");
+      fs::File configFile = SPIFFS.open("/config.json", "r");
+      if (configFile)
+      {
+        Serial.println("opened config file");
+        size_t size = configFile.size();
+        // Allocate a buffer to store contents of the file.
+        std::unique_ptr<char[]> buf(new char[size]);
+
+        configFile.readBytes(buf.get(), size);
+
+        DynamicJsonDocument json(1024);
+        auto deserializeError = deserializeJson(json, buf.get());
+        serializeJson(json, Serial);
+        if (!deserializeError)
+        {
+          Serial.println("\nparsed json");
+          strcpy(image_server, json["image_server"]);
+
+          return true;
+        }
+        else
+        {
+          Serial.println("failed to load json config");
+        }
+        configFile.close();
+      }
+    }
   }
   else
   {
-    // if you get here you have connected to the WiFi
-    Serial.println("connected...yeey :)");
-
-    d.update(display, custom_image_server.getValue());
+    Serial.println("failed to mount FS");
   }
 
-  // if (!display.rtcGetSecond())
+  return false;
+}
+
+// This gets called when the config mode is launced, might
+// be useful to update a display with this info.
+void configModeCallback(WiFiManager *myWiFiManager)
+{
+  Serial.println("Entered Conf Mode");
+
+  Serial.print("Config SSID: ");
+  Serial.println(myWiFiManager->getConfigPortalSSID());
+
+  Serial.print("Config IP Address: ");
+  Serial.println(WiFi.softAPIP());
+}
+
+void setup()
+{
+  SPIFFS.begin(true);
+  Serial.begin(115200);
+  display.begin();
+  display.clearDisplay();
+  Serial.setDebugOutput(true);
+
+  bool forceConfig = false;
+
+  // drd = new DoubleResetDetector(DRD_TIMEOUT, DRD_ADDRESS);
+  // if (drd->detectDoubleReset())
   // {
-  //   connectWifi();
-
-  //   configTime(globals::gmtOffset_sec, globals::daylightOffset_sec, globals::ntpServer);
-
-  //   struct tm timeinfo;
-  //   if (!getLocalTime(&timeinfo))
-  //   {
-  //     Serial.println("Failed to obtain time");
-  //     // return;
-  //   }
-
-  //   WiFi.disconnect();
-  //   // display.rtcSetTime(timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);                               // Send time to RTC
-  //   display.rtcSetDate(timeinfo.tm_wday, timeinfo.tm_mday, timeinfo.tm_mon, timeinfo.tm_year + 1900); // Send date to RTC
+  //   Serial.println(F("Forcing config mode as there was a Double reset detected"));
+  //   forceConfig = true;
   // }
 
-  // display.rtcGetRtcData();
+  bool spiffsSetup = loadConfigFile();
+  if (!spiffsSetup)
+  {
+    Serial.println(F("Forcing config mode as there is no saved config"));
+    forceConfig = true;
+  }
 
-  // d.update(display);
+  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
 
-  // display.joinAP(globals::ssid, globals::password);
+  wm.setSaveConfigCallback(saveConfigCallback);
+  // set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
+  wm.setAPCallback(configModeCallback);
 
-  // d.update(display, custom_mqtt_server.getValue());
+  wm.addParameter(&custom_image_server);
+
+  if (forceConfig)
+  {
+    if (!wm.startConfigPortal("::startConfigPortal"))
+    {
+      Serial.println("failed to connect and hit timeout");
+      delay(3000);
+      // reset and try again, or maybe put it to deep sleep
+      ESP.restart();
+      delay(5000);
+    }
+  }
+  else
+  {
+    if (!wm.autoConnect("::autoConnect"))
+    {
+      Serial.println("failed to connect and hit timeout");
+      delay(3000);
+      // if we still have not connected restart and try all over again
+      ESP.restart();
+      delay(5000);
+    }
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  strcpy(image_server, custom_image_server.getValue());
+
+  if (shouldSaveConfig)
+  {
+    saveConfigFile();
+  }
+
+  Serial.println("connected...yeey :)");
+  d.update(display, custom_image_server.getValue());
+
+  // save the custom parameters to FS
+  if (shouldSaveConfig)
+  {
+    saveConfigFile();
+  }
 
   // DO NOT DELETE
   // esp_sleep_enable_timer_wakeup(globals::TIME_TO_SLEEP * globals::uS_TO_S_FACTOR); // Activate wake-up timer
@@ -110,6 +215,20 @@ void setup()
   Serial.println("End setup");
 }
 
+unsigned long previousMillis = 0;
+
 void loop()
 {
+
+  unsigned long currentMillis = millis();
+
+  Serial.println("in loop");
+
+  if (currentMillis - previousMillis >= interval)
+  {
+    // save the last time you blinked the LED
+    previousMillis = currentMillis;
+
+    d.update(display, custom_image_server.getValue());
+  }
 }
