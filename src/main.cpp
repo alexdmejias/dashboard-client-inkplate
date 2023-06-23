@@ -209,26 +209,26 @@ void setup()
   }
 
   // DO NOT DELETE
-  // esp_sleep_enable_timer_wakeup(globals::TIME_TO_SLEEP * globals::uS_TO_S_FACTOR); // Activate wake-up timer
-  // esp_deep_sleep_start();                                                          // Put ESP32 into deep sleep. Program stops here.
+  esp_sleep_enable_timer_wakeup(globals::TIME_TO_SLEEP * globals::uS_TO_S_FACTOR); // Activate wake-up timer
+  esp_deep_sleep_start();                                                          // Put ESP32 into deep sleep. Program stops here.
 
   Serial.println("End setup");
 }
 
-unsigned long previousMillis = 0;
+// unsigned long previousMillis = 0;
 
 void loop()
 {
 
-  unsigned long currentMillis = millis();
+  // unsigned long currentMillis = millis();
 
-  Serial.println("in loop");
+  // Serial.println("in loop");
 
-  if (currentMillis - previousMillis >= interval)
-  {
-    // save the last time you blinked the LED
-    previousMillis = currentMillis;
+  // if (currentMillis - previousMillis >= interval)
+  // {
+  //   // save the last time you blinked the LED
+  //   previousMillis = currentMillis;
 
-    d.update(display, custom_image_server.getValue());
-  }
+  //   d.update(display, custom_image_server.getValue());
+  // }
 }

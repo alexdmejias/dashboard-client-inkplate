@@ -14,50 +14,83 @@
 
 Network network;
 
-// void save_settings();
-
 class Draw
 {
 
 public:
     void update(Inkplate &d, const char *serverAddress)
     {
-        Serial.println("starting delay");
-        delay(20000);
-        Serial.println("delay done");
         Serial.println(String(serverAddress));
 
         HTTPClient http;
 
         Serial.println("[HTTP] begin...\n");
-
-        http.begin("http://example.com/index.html"); // HTTP
-
-        Serial.println("[HTTP] GET...\n");
-        // start connection and send HTTP header
+        http.begin(String(serverAddress));
 
         char targetHeaderName[] = "Content-Type";
         const char *headerKeys[] = {targetHeaderName};
         const size_t headerKeysCount = sizeof(headerKeys) / sizeof(headerKeys[0]);
         http.collectHeaders(headerKeys, headerKeysCount);
-        int httpResponseCode = http.GET();
-        Serial.println(http.getString());
-        Serial.println(http.headers());
-        Serial.println(http.header(targetHeaderName));
+        Serial.println("[HTTP] GET...\n");
 
-        if (!d.drawImage(String(serverAddress), d.PNG, 0, 0))
+        int httpResponseCode = http.GET();
+
+        Serial.println(http.header(targetHeaderName));
+        String contentType = http.header(targetHeaderName);
+        bool shouldUpdateScreen = false;
+
+        if (httpResponseCode == 200)
         {
-            d.setTextSize(3);
-            d.setTextColor(0, 7);
-            d.setCursor(100, 360);
-            d.println("Image open error");
-            d.setCursor(100, 390);
-            d.println(serverAddress);
+            if (contentType == "image/png")
+            {
+                int32_t len = http.getSize();
+                if (!d.drawPngFromWeb(http.getStreamPtr(), 0, 0, len, 0, 0))
+                {
+                    drawCentreString(d, String("Image open error: ") + String(serverAddress));
+                }
+                else
+                {
+                    shouldUpdateScreen = true;
+                }
+            }
+            else
+            {
+                if (globals::lastState != 2)
+                {
+                    drawCentreString(d, String("Sleeping"));
+                    globals::lastState = 2;
+                    shouldUpdateScreen = true;
+                }
+            }
         }
-        d.display();
+        else
+        {
+            if (globals::lastState != 1)
+            {
+                drawCentreString(d, String("can't connect to server"));
+                globals::lastState = 1;
+                shouldUpdateScreen = true;
+            }
+        }
+
+        if (shouldUpdateScreen)
+        {
+            d.display();
+        }
     }
 
 private:
+    void drawCentreString(Inkplate &d, String buf)
+    {
+        int16_t x1, y1;
+        uint16_t w, h;
+        d.setTextSize(3);
+        d.setTextColor(7, 1);
+        d.getTextBounds(buf, 600, 790, &x1, &y1, &w, &h); // calc width of new string
+        d.setCursor(600 - w / 2, 790);
+        d.println(buf);
+        d.display();
+    }
     /* void drawImage(Inkplate &d)
     {
         SdFile file;
