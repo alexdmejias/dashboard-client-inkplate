@@ -20,7 +20,8 @@ class Draw
 public:
     void update(Inkplate &d, const char *serverAddress)
     {
-        Serial.println(String(serverAddress));
+        Serial.println("Updating display with address:");
+        Serial.print(String(serverAddress));
 
         HTTPClient http;
 
@@ -65,9 +66,13 @@ public:
         }
         else
         {
+
+            Serial.println("RESPONSE CODE IS NOT 200");
+            Serial.println(httpResponseCode);
+
             if (globals::lastState != 1)
             {
-                drawCentreString(d, String("can't connect to server"));
+                drawCentreString(d, String("can't connect to server: ") + String(serverAddress));
                 globals::lastState = 1;
                 shouldUpdateScreen = true;
             }
@@ -79,7 +84,6 @@ public:
         }
     }
 
-private:
     void drawCentreString(Inkplate &d, String buf)
     {
         int16_t x1, y1;

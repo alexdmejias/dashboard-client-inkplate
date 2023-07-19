@@ -38,7 +38,7 @@ WiFiManager wm;
 
 // DoubleResetDetector *drd;
 
-char image_server[34] = "http://192.168.0.97:3000";
+char image_server[34] = "";
 
 const long interval = 5000;
 
@@ -55,6 +55,8 @@ void saveConfigCallback()
 
 void saveConfigFile()
 {
+  Serial.println("saving config...");
+
   DynamicJsonDocument jsonBuffer(1024);
 
   jsonBuffer["image_server"] = image_server;
@@ -137,22 +139,22 @@ void setup()
   SPIFFS.begin(true);
   Serial.begin(115200);
   display.begin();
+
   display.clearDisplay();
   Serial.setDebugOutput(true);
 
   bool forceConfig = false;
 
-  // drd = new DoubleResetDetector(DRD_TIMEOUT, DRD_ADDRESS);
-  // if (drd->detectDoubleReset())
-  // {
-  //   Serial.println(F("Forcing config mode as there was a Double reset detected"));
-  //   forceConfig = true;
-  // }
-
   bool spiffsSetup = loadConfigFile();
   if (!spiffsSetup)
   {
     Serial.println(F("Forcing config mode as there is no saved config"));
+    forceConfig = true;
+  }
+
+  if (display.readTouchpad(PAD1))
+  {
+    Serial.println(F("Forcing config mode because PAD1 is being pressed"));
     forceConfig = true;
   }
 
@@ -166,9 +168,10 @@ void setup()
 
   if (forceConfig)
   {
-    if (!wm.startConfigPortal("::startConfigPortal"))
+    if (!wm.startConfigPortal("::inkplate-forced"))
     {
-      Serial.println("failed to connect and hit timeout");
+      Serial.println("forcing manual config");
+      d.drawCentreString(display, String("forcing manual config"));
       delay(3000);
       // reset and try again, or maybe put it to deep sleep
       ESP.restart();
@@ -177,9 +180,10 @@ void setup()
   }
   else
   {
-    if (!wm.autoConnect("::autoConnect"))
+    if (!wm.autoConnect("::inkplate"))
     {
       Serial.println("failed to connect and hit timeout");
+      d.drawCentreString(display, String("failed to connect and hit timeout"));
       delay(3000);
       // if we still have not connected restart and try all over again
       ESP.restart();
@@ -194,13 +198,8 @@ void setup()
 
   strcpy(image_server, custom_image_server.getValue());
 
-  if (shouldSaveConfig)
-  {
-    saveConfigFile();
-  }
-
   Serial.println("connected...yeey :)");
-  d.update(display, custom_image_server.getValue());
+  d.update(display, image_server);
 
   // save the custom parameters to FS
   if (shouldSaveConfig)
