@@ -25,6 +25,8 @@ Config config;                        // <- global configuration object
 
 void readConfig(const char *filename, Config &config);
 void drawCentreString(Inkplate &d, String buf);
+void connectToWifi(const char *ssid, const char *password);
+void draw(Inkplate &d, const char *hostname);
 
 void setup()
 {
@@ -37,36 +39,9 @@ void setup()
   Serial.println(":::::::::::::::::::: Inkplate SD card example");
   readConfig(filename, config);
 
-  Serial.println(":::::::::::::::::::: Connecting to WiFi...");
+  connectToWifi(config.ssid, config.password);
 
-  // Connect to the WiFi network.
-  WiFi.mode(WIFI_MODE_STA);
-  WiFi.begin(config.ssid, config.password);
-
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println(":::::::::::::::::::: WiFi OK! Downloading...");
-
-  Serial.println(":::::::::::::::::::: config data:");
-  Serial.println("hostname");
-  Serial.println(config.hostname);
-  Serial.println("ssid");
-  Serial.println(config.ssid);
-  Serial.println("password");
-  Serial.println(config.password);
-  Serial.println(":::::::::::::::::::: will display image promptly");
-
-  if (!display.drawPngFromWeb(config.hostname, 0, 0, 0, true))
-  {
-    Serial.println(":::::::::::::::::::: Image open error");
-    display.display();
-  }
-  Serial.println(":::::::::::::::::::: Image displayed");
-  drawCentreString(display, String(config.hostname));
-  display.display();
+  draw(display, config.hostname);
 
   display.sdCardSleep(); // Put sd card in sleep mode
 }
@@ -74,6 +49,18 @@ void setup()
 void loop()
 {
   // Nothing...
+}
+void connectToWifi(const char *ssid, const char *password)
+{
+  Serial.println(":::::::::::::::::::: Connecting to WiFi...");
+  WiFi.mode(WIFI_MODE_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println(":::::::::::::::::::: WiFi OK! Downloading...");
 }
 
 void drawCentreString(Inkplate &d, String buf)
@@ -127,6 +114,14 @@ void readConfig(const char *filename, Config &config)
       strlcpy(config.ssid, doc["ssid"] | "example.com", sizeof(config.hostname));
       strlcpy(config.password, doc["password"] | "example.com", sizeof(config.hostname));
     }
+
+    Serial.println(":::::::::::::::::::: config data:");
+    Serial.println("hostname");
+    Serial.println(config.hostname);
+    Serial.println("ssid");
+    Serial.println(config.ssid);
+    Serial.println("password");
+    Serial.println(config.password);
   }
   else
   { // If card init was not successful, display error on screen, put sd card in sleep mode, and stop the program (using infinite loop)
@@ -135,4 +130,18 @@ void readConfig(const char *filename, Config &config)
     while (true)
       ;
   }
+}
+
+void draw(Inkplate &d, const char *hostname)
+{
+  Serial.println(":::::::::::::::::::: will display image promptly");
+
+  if (!display.drawPngFromWeb(config.hostname, 0, 0, 0, true))
+  {
+    Serial.println(":::::::::::::::::::: Image open error");
+    display.display();
+  }
+  Serial.println(":::::::::::::::::::: Image displayed");
+  drawCentreString(display, String(config.hostname));
+  display.display();
 }
