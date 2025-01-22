@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 #include "HTTPClient.h" //Include library for HTTPClient
 #include "WiFi.h"       //Include library for WiFi
+#include "fonts/FreeSans9pt7b.h"
 
 Inkplate display(INKPLATE_3BIT);
 SdFile file;
@@ -35,7 +36,7 @@ void setup()
   display.display();      // Put clear image on display
   display.setTextSize(5);
 
-  Serial.begin(230400); // Init serial communication
+  Serial.begin(115200); // Init serial communication
   Serial.println(":::::::::::::::::::: Inkplate SD card example");
   readConfig(filename, config);
 
@@ -50,6 +51,7 @@ void loop()
 {
   // Nothing...
 }
+
 void connectToWifi(const char *ssid, const char *password)
 {
   Serial.println(":::::::::::::::::::: Connecting to WiFi...");
@@ -67,10 +69,14 @@ void drawCentreString(Inkplate &d, String buf)
 {
   int16_t x1, y1;
   uint16_t w, h;
-  d.setTextSize(3);
-  d.setTextColor(7, 1);
-  d.getTextBounds(buf, 600, 790, &x1, &y1, &w, &h); // calc width of new string
-  d.setCursor(600 - w / 2, 790);
+
+  d.setTextSize(1);
+  d.setFont(&FreeSans9pt7b);
+
+  display.getTextBounds(buf, 0, 0, &x1, &y1, &w, &h);
+  display.setCursor((d.width() - w) / 2, 810);
+
+  d.setTextColor(WHITE, BLACK);
   d.println(buf);
 }
 
@@ -84,7 +90,7 @@ void readConfig(const char *filename, Config &config)
     JsonDocument doc;
 
     // Try to load text with max lenght of 200 chars.
-    if (!file.open("/config.txt", O_RDONLY))
+    if (!file.open(filename, O_RDONLY))
     { // If it fails to open, send error message to display, otherwise read the file.
       Serial.println(":::::::::::::::::::: File open error");
       display.display();
@@ -142,6 +148,6 @@ void draw(Inkplate &d, const char *hostname)
     display.display();
   }
   Serial.println(":::::::::::::::::::: Image displayed");
-  drawCentreString(display, String(config.hostname));
+  drawCentreString(display, String("connected to: ") + String(config.hostname));
   display.display();
 }
