@@ -18,7 +18,7 @@ SdFile file;
 
 struct Config
 {
-  char hostname[64];
+  char server[64];
   char password[64];
   char ssid[64];
   int sleepTime;
@@ -29,19 +29,20 @@ const char *filename = "/config.txt"; // SD library uses 8.3 filenames
 Config config;                        // global configuration object
 
 Config defaultConfig = {
-    "example.com",        // hostname
+    "example.com",        // server
     "fake_password",      // password
     "my_home_network-5g", // ssid
     20,                   // sleepTime
     true                  // debug
 };
 
-void readConfig(const char *filename, Config &config);
+void readConfig(Inkplate &d, const char *filename, Config &config);
 void getStringCenter(Inkplate &d, String buf, int *a, int *b);
 void connectToWifi(const char *ssid, const char *password);
-void drawImage(Inkplate &d, const char *hostname);
+void drawImage(Inkplate &d, const char *server);
 void drawDebugInfo(Inkplate &d);
 void drawErrorMessage(Inkplate &d, String buf);
+void stopProgram(Inkplate &d);
 void log(String msg);
 
 void setup()
@@ -51,11 +52,11 @@ void setup()
   Serial.begin(115200); // Init serial communication
   log("Inkplate SD card example");
 
-  readConfig(filename, config);
+  readConfig(display, filename, config);
 
   connectToWifi(config.ssid, config.password);
 
-  drawImage(display, config.hostname);
+  drawImage(display, config.server);
 
   if (config.debug)
   {
@@ -64,7 +65,6 @@ void setup()
 
   display.display();
 
-  // display.sdCardSleep(); // Put sd card in sleep mode
   esp_sleep_enable_timer_wakeup(config.sleepTime * 1000000); // Activate wake-up timer -- wake up after 20s here
   esp_deep_sleep_start();                                    // Put ESP32 into deep sleep. Program stops here.
 }
@@ -94,14 +94,14 @@ void getStringCenter(Inkplate &d, String buf, int *a, int *b)
   uint16_t w, h;
 
   d.getTextBounds(buf, 0, 0, &x1, &y1, &w, &h);
-  *a = (display.width() - w) / 2;
-  *b = (display.height() - h) / 2;
+  *a = (d.width() - w) / 2;
+  *b = (d.height() - h) / 2;
 }
 
-void readConfig(const char *filename, Config &config)
+void readConfig(Inkplate &d, const char *filename, Config &config)
 {
   // Init SD card. Display if SD card is init propery or not.
-  if (display.sdCardInit())
+  if (d.sdCardInit())
   {
     log("SD Card ok! Reading data...");
     // Allocate a temporary JsonDocument
@@ -111,8 +111,8 @@ void readConfig(const char *filename, Config &config)
     if (!file.open(filename, O_RDONLY))
     { // If it fails to open, send error message to display, otherwise read the file.
       log("File open error");
-      display.display();
-      display.sdCardSleep();
+      drawErrorMessage(d, "Error: Could not open file");
+      stopProgram(d);
     }
     else
     {
@@ -128,37 +128,40 @@ void readConfig(const char *filename, Config &config)
       DeserializationError error = deserializeJson(doc, text);
       if (error)
       {
-        log("Failed to read file, using default configuration");
+        log("Failed to read file, using default configuration" + String(error.c_str()));
       }
 
       log("Copying values to config object");
-      // TODO should fail ssid, password, and hostname if they are not present
-      strlcpy(config.hostname, doc["hostname"] | defaultConfig.hostname, sizeof(config.hostname));
-      strlcpy(config.ssid, doc["ssid"] | defaultConfig.ssid, sizeof(config.hostname));
-      strlcpy(config.password, doc["password"] | defaultConfig.password, sizeof(config.hostname));
+      if (!doc["server"].is<const char *>() || !doc["ssid"].is<const char *>() || !doc["password"].is<const char *>())
+      {
+        log("Missing required config values or incorrect type");
+        drawErrorMessage(d, "Error: Missing required config values or incorrect type");
+        stopProgram(d);
+      }
+      strlcpy(config.server, doc["server"], sizeof(config.server));
+      strlcpy(config.ssid, doc["ssid"], sizeof(config.ssid));
+      strlcpy(config.password, doc["password"], sizeof(config.password));
       config.sleepTime = doc["sleepTime"] | defaultConfig.sleepTime;
       config.debug = doc["debug"] | defaultConfig.debug;
     }
 
     // TODO should dump all of the config data
     log("Config data: ");
-    Serial.printf("\nhostname: %s\nssid: %s\npassword: %s\n", config.hostname, config.ssid, config.password);
+    Serial.printf("server: %s\nssid: %s\npassword: %s\n", config.server, config.ssid, config.password);
   }
   else
-  { // If card init was not successful, display error on screen, put sd card in sleep mode, and stop the program (using infinite loop)
-    // TODO should probably do something else here
+  {
     log("SD Card error!");
-    display.sdCardSleep();
-    while (true)
-      ;
+    drawErrorMessage(d, "Error: SD Card error");
+    stopProgram(d);
   }
 }
 
-void drawImage(Inkplate &d, const char *hostname)
+void drawImage(Inkplate &d, const char *server)
 {
   log("Will display image now");
 
-  if (!d.drawPngFromWeb(hostname, 0, 0, 0, true))
+  if (!d.drawPngFromWeb(server, 0, 0, 0, true))
   {
     log("Image open error");
     drawErrorMessage(d, "Error: Could not draw image");
@@ -189,7 +192,7 @@ void drawDebugInfo(Inkplate &d)
   d.setTextColor(WHITE, BLACK);
   int centerX;
   int centerY;
-  String debugString = "server: " + String(config.hostname) + " | ssid: " + config.ssid + " | sleep: " + String(config.sleepTime);
+  String debugString = "server: " + String(config.server) + " | ssid: " + config.ssid + " | sleep(secs): " + String(config.sleepTime);
   getStringCenter(d, debugString, &centerX, &centerY);
 
   d.setCursor(centerX, 810);
@@ -200,4 +203,13 @@ void drawDebugInfo(Inkplate &d)
 void log(String msg)
 {
   Serial.println("::::::::::: " + String(msg));
+}
+
+void stopProgram(Inkplate &d)
+{
+  d.display();
+  d.sdCardSleep();
+  // TODO send into deep sleep
+  while (true)
+    ;
 }
