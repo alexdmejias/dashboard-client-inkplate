@@ -28,6 +28,14 @@ struct Config
 const char *filename = "/config.txt"; // SD library uses 8.3 filenames
 Config config;                        // global configuration object
 
+Config defaultConfig = {
+    "example.com",        // hostname
+    "fake_password",      // password
+    "my_home_network-5g", // ssid
+    20,                   // sleepTime
+    true                  // debug
+};
+
 void readConfig(const char *filename, Config &config);
 void getStringCenter(Inkplate &d, String buf, int *a, int *b);
 void connectToWifi(const char *ssid, const char *password);
@@ -124,14 +132,12 @@ void readConfig(const char *filename, Config &config)
       }
 
       log("Copying values to config object");
-      // TODO defaults should be defined above
-      // TODO document default values
-      // Copy values from the JsonDocument to the Config
-      strlcpy(config.hostname, doc["hostname"] | "example.com", sizeof(config.hostname));
-      strlcpy(config.ssid, doc["ssid"] | "my_home_network-5g", sizeof(config.hostname));
-      strlcpy(config.password, doc["password"] | "fake_password", sizeof(config.hostname));
-      config.sleepTime = doc["sleepTime"] | 20;
-      config.debug = doc["debug"] | true;
+      // TODO should fail ssid, password, and hostname if they are not present
+      strlcpy(config.hostname, doc["hostname"] | defaultConfig.hostname, sizeof(config.hostname));
+      strlcpy(config.ssid, doc["ssid"] | defaultConfig.ssid, sizeof(config.hostname));
+      strlcpy(config.password, doc["password"] | defaultConfig.password, sizeof(config.hostname));
+      config.sleepTime = doc["sleepTime"] | defaultConfig.sleepTime;
+      config.debug = doc["debug"] | defaultConfig.debug;
     }
 
     // TODO should dump all of the config data
