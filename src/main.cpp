@@ -34,13 +34,14 @@ void connectToWifi(const char *ssid, const char *password);
 void drawImage(Inkplate &d, const char *hostname);
 void drawDebugInfo(Inkplate &d);
 void drawErrorMessage(Inkplate &d, String buf);
+void log(String msg);
 
 void setup()
 {
   display.begin(); // Init Inkplate library (you should call this function ONLY ONCE)
 
   Serial.begin(115200); // Init serial communication
-  Serial.println(":::::::::::::::::::: Inkplate SD card example");
+  log("Inkplate SD card example");
 
   readConfig(filename, config);
 
@@ -67,15 +68,16 @@ void loop()
 
 void connectToWifi(const char *ssid, const char *password)
 {
-  Serial.println(":::::::::::::::::::: Connecting to WiFi...");
+  log("Connecting to WiFi...");
   WiFi.mode(WIFI_MODE_STA);
   WiFi.begin(ssid, password);
+  // TODO there should be a way to determine if the connection was successful after X amount of time
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
     Serial.print(".");
   }
-  Serial.println(":::::::::::::::::::: WiFi OK! Downloading...");
+  log("WiFi OK! Downloading...");
 }
 
 void getStringCenter(Inkplate &d, String buf, int *a, int *b)
@@ -93,14 +95,14 @@ void readConfig(const char *filename, Config &config)
   // Init SD card. Display if SD card is init propery or not.
   if (display.sdCardInit())
   {
-    Serial.println(":::::::::::::::::::: SD Card ok! Reading data...");
+    log("SD Card ok! Reading data...");
     // Allocate a temporary JsonDocument
     JsonDocument doc;
 
     // Try to load text with max lenght of 200 chars.
     if (!file.open(filename, O_RDONLY))
     { // If it fails to open, send error message to display, otherwise read the file.
-      Serial.println(":::::::::::::::::::: File open error");
+      log("File open error");
       display.display();
       display.sdCardSleep();
     }
@@ -118,11 +120,10 @@ void readConfig(const char *filename, Config &config)
       DeserializationError error = deserializeJson(doc, text);
       if (error)
       {
-        Serial.println("::::::::::::::::::: Failed to read file, using default configuration");
+        log("Failed to read file, using default configuration");
       }
 
-      Serial.println(":::::::::::::::::::: did not fail to read config file, copying values to config object");
-
+      log("Copying values to config object");
       // TODO defaults should be defined above
       // TODO document default values
       // Copy values from the JsonDocument to the Config
@@ -134,18 +135,13 @@ void readConfig(const char *filename, Config &config)
     }
 
     // TODO should dump all of the config data
-    Serial.printf(":::::::::::::::::::: config data: \nhostname: %s\nssid: %s\npassword: %s\n", config.hostname, config.ssid, config.password);
-    // Serial.println("hostname");
-    // Serial.println(config.hostname);
-    // Serial.println("ssid");
-    // Serial.println(config.ssid);
-    // Serial.println("password");
-    // Serial.println(config.password);
+    log("Config data: ");
+    Serial.printf("\nhostname: %s\nssid: %s\npassword: %s\n", config.hostname, config.ssid, config.password);
   }
   else
   { // If card init was not successful, display error on screen, put sd card in sleep mode, and stop the program (using infinite loop)
     // TODO should probably do something else here
-    Serial.println(":::::::::::::::::::: SD Card error!");
+    log("SD Card error!");
     display.sdCardSleep();
     while (true)
       ;
@@ -154,14 +150,14 @@ void readConfig(const char *filename, Config &config)
 
 void drawImage(Inkplate &d, const char *hostname)
 {
-  Serial.println(":::::::::::::::::::: will display image now");
+  log("Will display image now");
 
   if (!d.drawPngFromWeb(hostname, 0, 0, 0, true))
   {
-    Serial.println(":::::::::::::::::::: Image open error");
+    log("Image open error");
     drawErrorMessage(d, "Error: Could not draw image");
   }
-  Serial.println(":::::::::::::::::::: Image displayed");
+  log("Image displayed");
 }
 
 void drawErrorMessage(Inkplate &d, String message)
@@ -180,7 +176,8 @@ void drawErrorMessage(Inkplate &d, String message)
 
 void drawDebugInfo(Inkplate &d)
 {
-  Serial.println(":::::::::::::::::::: displaying debug info");
+  // log("Displaying debug info");
+  log("Displaying debug info");
   d.setTextSize(1);
   d.setFont(&FreeSans9pt7b);
   d.setTextColor(WHITE, BLACK);
@@ -192,4 +189,9 @@ void drawDebugInfo(Inkplate &d)
   d.setCursor(centerX, 810);
 
   d.println(debugString);
+}
+
+void log(String msg)
+{
+  Serial.println("::::::::::: " + String(msg));
 }
