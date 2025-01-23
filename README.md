@@ -3,15 +3,12 @@ Dashboard project meant to work with the inkplate family of displays. It will pi
 
 ## Features
 - microSD configurable
-- deepsleep
+- deep sleep
 - purposefully dumb
 
 ## Roadmap
-- display error message if it can't connect
-- display error message SSID, password, or server are not present
 - show help screen?
 - define sleep hours
-- remove unused files
 - run time configurable?
 - debug mode to show/hide configuration options
 - wifimanager
