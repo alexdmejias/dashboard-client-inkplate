@@ -24,6 +24,8 @@ Wifi SSID to connect to
 ### password(string)
 Plain text password for the wifi network
 ### sleepTime(int)
-Amount of seconds that the screen should sleep for
+Amount of seconds that the screen should sleep for between refreshes
 ### debug(bool)
 Whether to display configuration being used
+### wifiTimeout(int)
+Amount of seconds that should be waited before giving up connecting to WIFI 

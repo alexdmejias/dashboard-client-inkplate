@@ -21,6 +21,7 @@ struct Config
   char server[64];
   char password[64];
   char ssid[64];
+  int wifiTimeout;
   int sleepTime;
   bool debug;
 };
@@ -32,13 +33,14 @@ Config defaultConfig = {
     "example.com",        // server
     "fake_password",      // password
     "my_home_network-5g", // ssid
+    30,                   // wifiTimeout
     20,                   // sleepTime
     true                  // debug
 };
 
 void readConfig(Inkplate &d, const char *filename, Config &config);
 void getStringCenter(Inkplate &d, String buf, int *a, int *b);
-void connectToWifi(const char *ssid, const char *password);
+void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout);
 void drawImage(Inkplate &d, const char *server);
 void drawDebugInfo(Inkplate &d);
 void drawErrorMessage(Inkplate &d, String buf);
@@ -54,7 +56,7 @@ void setup()
 
   readConfig(display, filename, config);
 
-  connectToWifi(config.ssid, config.password);
+  connectToWifi(display, config.ssid, config.password, config.wifiTimeout);
 
   drawImage(display, config.server);
 
@@ -74,18 +76,18 @@ void loop()
   // Nothing...
 }
 
-void connectToWifi(const char *ssid, const char *password)
+void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout)
 {
   log("Connecting to WiFi...");
-  WiFi.mode(WIFI_MODE_STA);
-  WiFi.begin(ssid, password);
-  // TODO there should be a way to determine if the connection was successful after X amount of time
-  while (WiFi.status() != WL_CONNECTED)
+  bool connectedToWifi = d.connectWiFi(config.ssid, config.password, config.wifiTimeout, true);
+  if (!connectedToWifi)
   {
-    delay(500);
-    Serial.print(".");
+    log("Failed to connect to WiFi");
+    drawErrorMessage(d, String("Error: Failed to connect to WiFi. SSID: ") + config.ssid);
+    stopProgram(d);
   }
-  log("WiFi OK! Downloading...");
+
+  log("Connected to WiFi");
 }
 
 void getStringCenter(Inkplate &d, String buf, int *a, int *b)
@@ -142,6 +144,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
       strlcpy(config.ssid, doc["ssid"], sizeof(config.ssid));
       strlcpy(config.password, doc["password"], sizeof(config.password));
       config.sleepTime = doc["sleepTime"] | defaultConfig.sleepTime;
+      config.wifiTimeout = doc["wifiTimeout"] | defaultConfig.wifiTimeout;
       config.debug = doc["debug"] | defaultConfig.debug;
     }
 
