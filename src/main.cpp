@@ -11,41 +11,34 @@
 #include "WiFi.h"       //Include library for WiFi
 #include "fonts/FreeSans9pt7b.h"
 #include "fonts/FreeSans12pt7b.h"
+#include "fonts/FreeSans24pt7b.h"
 #include "driver/rtc_io.h"
+#include "time.h"
+#include "global.h"
+#include "draw.h"
 
 Inkplate display(INKPLATE_3BIT);
 SdFile file;
-
-struct Config
-{
-  char server[64];
-  char password[64];
-  char ssid[64];
-  int wifiTimeout;
-  int sleepTime;
-  bool debug;
-};
 
 const char *filename = "/config.txt"; // SD library uses 8.3 filenames
 Config config;                        // global configuration object
 
 Config defaultConfig = {
-    "example.com",        // server
-    "fake_password",      // password
-    "my_home_network-5g", // ssid
-    30,                   // wifiTimeout
-    20,                   // sleepTime
-    true                  // debug
+    "example.com",           // server
+    "fake_password",         // password
+    "my_home_network-5g",    // ssid
+    30,                      // wifiTimeout
+    20,                      // sleepTime
+    true,                    // debug
+    "EST5EDT,M3.2.0,M11.1.0" // timezone
 };
 
 void readConfig(Inkplate &d, const char *filename, Config &config);
-void getStringCenter(Inkplate &d, String buf, int *a, int *b);
 void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout);
-void drawImage(Inkplate &d, const char *server);
-void drawDebugInfo(Inkplate &d);
-void drawErrorMessage(Inkplate &d, String buf);
 void stopProgram(Inkplate &d);
-void log(String msg);
+// void setTime(Inkplate &d);
+// void setTimezone(char *timezone);
+void getImage(Inkplate &d, const char *server);
 
 void setup()
 {
@@ -58,11 +51,14 @@ void setup()
 
   connectToWifi(display, config.ssid, config.password, config.wifiTimeout);
 
-  drawImage(display, config.server);
+  // setTime(display);
+  // setTimezone(config.timezone);
+  // // drawImage(display, config.server);
+  getImage(display, config.server);
 
   if (config.debug)
   {
-    drawDebugInfo(display);
+    drawDebugInfo(display, config);
   }
 
   display.display();
@@ -90,14 +86,48 @@ void connectToWifi(Inkplate &d, const char *ssid, const char *password, int time
   log("Connected to WiFi");
 }
 
-void getStringCenter(Inkplate &d, String buf, int *a, int *b)
+void getImage(Inkplate &d, const char *server)
 {
-  int16_t x1, y1;
-  uint16_t w, h;
+  HTTPClient http;
+  // Set parameters to speed up the download process.
+  http.getStream().setNoDelay(true);
+  http.getStream().setTimeout(1);
+  const char *headerKeys[] = {"x-test"};
+  const size_t numberOfHeaders = 1;
 
-  d.getTextBounds(buf, 0, 0, &x1, &y1, &w, &h);
-  *a = (d.width() - w) / 2;
-  *b = (d.height() - h) / 2;
+  http.begin(server);
+  http.collectHeaders(headerKeys, numberOfHeaders);
+
+  // Check response code.
+  int httpCode = http.GET();
+  if (httpCode == 200)
+  {
+    // Get the response length and make sure it is not 0.
+    int32_t len = http.getSize();
+    if (len > 0)
+    {
+      if (!drawImageFromClient(d, http, len))
+      {
+        // If is something failed (wrong filename or wrong bitmap format), write error message on the screen.
+        // REMEMBER! You can only use Windows Bitmap file with color depth of 1, 4, 8 or 24 bits with no
+        // compression!
+        d.println("Image open error");
+        d.display();
+      }
+      Serial.printf("%s", http.header("x-test"));
+      d.display();
+    }
+    else
+    {
+      log("Invalid response length");
+      d.display();
+    }
+  }
+  else
+  {
+    log("HTTP error");
+    d.display();
+  }
 }
 
 void readConfig(Inkplate &d, const char *filename, Config &config)
@@ -118,7 +148,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
     }
     else
     {
-      char text[501];            // Array where data from SD card is stored (max 200 chars here)
+      char text[501];            // Array where data from SD card is stored (max 500 chars here)
       int len = file.fileSize(); // Read how big is file that we are opening
       if (len > 500)
       {
@@ -143,6 +173,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
       strlcpy(config.server, doc["server"], sizeof(config.server));
       strlcpy(config.ssid, doc["ssid"], sizeof(config.ssid));
       strlcpy(config.password, doc["password"], sizeof(config.password));
+      // strlcpy(config.timezone, doc["timezone"] | defaultConfig.timezone, sizeof(config.timezone));
       config.sleepTime = doc["sleepTime"] | defaultConfig.sleepTime;
       config.wifiTimeout = doc["wifiTimeout"] | defaultConfig.wifiTimeout;
       config.debug = doc["debug"] | defaultConfig.debug;
@@ -160,54 +191,6 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
   }
 }
 
-void drawImage(Inkplate &d, const char *server)
-{
-  log("Will display image now");
-
-  if (!d.drawPngFromWeb(server, 0, 0, 0, true))
-  {
-    log("Image open error");
-    drawErrorMessage(d, "Error: Could not draw image");
-  }
-  log("Image displayed");
-}
-
-void drawErrorMessage(Inkplate &d, String message)
-{
-  d.setTextSize(1);
-  d.setFont(&FreeSans12pt7b);
-  d.setTextColor(WHITE, BLACK);
-  int centerX;
-  int centerY;
-  getStringCenter(d, message, &centerX, &centerY);
-
-  d.setCursor(centerX, centerY);
-
-  d.println(message);
-}
-
-void drawDebugInfo(Inkplate &d)
-{
-  // log("Displaying debug info");
-  log("Displaying debug info");
-  d.setTextSize(1);
-  d.setFont(&FreeSans9pt7b);
-  d.setTextColor(WHITE, BLACK);
-  int centerX;
-  int centerY;
-  String debugString = "server: " + String(config.server) + " | ssid: " + config.ssid + " | sleep(secs): " + String(config.sleepTime);
-  getStringCenter(d, debugString, &centerX, &centerY);
-
-  d.setCursor(centerX, 810);
-
-  d.println(debugString);
-}
-
-void log(String msg)
-{
-  Serial.println("::::::::::: " + String(msg));
-}
-
 void stopProgram(Inkplate &d)
 {
   d.display();
@@ -216,3 +199,48 @@ void stopProgram(Inkplate &d)
   while (true)
     ;
 }
+
+// void setTime(Inkplate &d)
+// {
+//   log("Setting RTC time");
+//   // Structure used to hold time information
+//   struct tm timeInfo;
+//   d.getNTPDateTime(&timeInfo);
+//   time_t nowSec;
+//   // Fetch current time in epoch format and store it
+//   d.getNTPEpoch(&nowSec);
+//   // This loop ensures that the NTP time fetched is valid and beyond a certain threshold
+//   log(F("Current time: "));
+//   log(asctime(&timeInfo));
+//   // while (nowSec < 8 * 3600 * 2)
+//   // {
+//   //   delay(500);
+//   //   yield();
+//   //   d.getNTPEpoch(&nowSec);
+//   // }
+//   log("a");
+//   gmtime_r(&nowSec, &timeInfo);
+//   log("b");
+//   d.rtcSetTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec);
+//   d.rtcGetRtcData();
+//   log("c");
+//   log("timeInfo.tm_hour");
+//   log(String(timeInfo.tm_hour, DEC));
+//   log(String(timeInfo.tm_hour));
+//   log("timeInfo.tm_hour");
+//   // d.rtcSetTime(hour, minutes, seconds);    // Send time to RTC
+//   // display.rtcSetDate(weekday, day, month, year); // Send date to RTC
+//   log(d.rtcGetHour());
+//   log("d");
+//   log(String(d.rtcGetHour(), DEC));
+//   Serial.println(d.rtcGetHour());
+//   log("e");
+// }
+
+// https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+// void setTimezone(char *timezone)
+// {
+//   Serial.printf("  Setting Timezone to %s\n", timezone);
+//   setenv("TZ", timezone, 1); //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
+//   tzset();
+// }
