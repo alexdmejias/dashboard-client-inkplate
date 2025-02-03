@@ -33,9 +33,15 @@ Config defaultConfig = {
     "EST5EDT,M3.2.0,M11.1.0" // timezone
 };
 
+#define TOUCHPAD_WAKE_MASK (int64_t(1) << GPIO_NUM_34)
+
+int sleepFor;
+bool inDebugMode = false;
+
 void readConfig(Inkplate &d, const char *filename, Config &config);
 void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout);
 void stopProgram(Inkplate &d);
+void handleWakeup(Inkplate &d);
 // void setTime(Inkplate &d);
 // void setTimezone(char *timezone);
 void getImage(Inkplate &d, const char *server);
@@ -45,31 +51,84 @@ void setup()
   display.begin(); // Init Inkplate library (you should call this function ONLY ONCE)
 
   Serial.begin(115200); // Init serial communication
-  log("Inkplate SD card example");
 
-  readConfig(display, filename, config);
+  display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
+  display.setIntPin(PAD1, RISING, IO_INT_ADDR);
+  display.setIntPin(PAD2, RISING, IO_INT_ADDR);
+  display.setIntPin(PAD3, RISING, IO_INT_ADDR);
 
-  connectToWifi(display, config.ssid, config.password, config.wifiTimeout);
+  handleWakeup(display);
 
-  // setTime(display);
-  // setTimezone(config.timezone);
-  // // drawImage(display, config.server);
-  getImage(display, config.server);
-
-  if (config.debug)
+  if (inDebugMode)
   {
-    drawDebugInfo(display, config);
+    display.clearDisplay();
+    drawErrorMessage(display, "debug mode, touch any pad to exit");
+    display.display();
   }
+  else
+  {
+    readConfig(display, filename, config);
 
-  display.display();
+    connectToWifi(display, config.ssid, config.password, config.wifiTimeout);
 
-  esp_sleep_enable_timer_wakeup(config.sleepTime * 1000000); // Activate wake-up timer -- wake up after 20s here
-  esp_deep_sleep_start();                                    // Put ESP32 into deep sleep. Program stops here.
+    // setTime(display);
+    // setTimezone(config.timezone);
+    // // drawImage(display, config.server);
+    getImage(display, config.server);
+
+    if (config.debug)
+    {
+      drawDebugInfo(display, config);
+    }
+
+    display.display();
+
+    int a = sleepFor | config.sleepTime;
+    esp_sleep_enable_timer_wakeup(a * 1000000); // Activate wake-up timer
+    esp_sleep_enable_ext1_wakeup(TOUCHPAD_WAKE_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
+    log("Going to sleep for " + String(a) + " seconds");
+    esp_deep_sleep_start(); // Put ESP32 into deep sleep. Program stops here.
+    log("Not going to sleep");
+  }
 }
 
 void loop()
 {
-  // Nothing...
+  if (display.readTouchpad(PAD1) || display.readTouchpad(PAD2) || display.readTouchpad(PAD3))
+  {
+    log("exitting debug mode");
+    inDebugMode = false;
+    ESP.restart();
+  }
+
+  log("in debug mode");
+  delay(100); // Wait a little bit between readings.
+}
+
+void handleWakeup(Inkplate &d)
+{
+  esp_sleep_wakeup_cause_t wakeup_reason;
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+  switch (wakeup_reason)
+  {
+  case ESP_SLEEP_WAKEUP_EXT0:
+    log("--------------- v     Wakeup caused by external signal using RTC_IO");
+    break;
+  case ESP_SLEEP_WAKEUP_TIMER:
+    log("--------------- v     Wakeup caused by timer");
+    break;
+  case ESP_SLEEP_WAKEUP_EXT1:
+  case ESP_SLEEP_WAKEUP_TOUCHPAD:
+    log("--------------- v     Wakeup caused by touchpad");
+    inDebugMode = true;
+    break;
+  case ESP_SLEEP_WAKEUP_ULP:
+    log("--------------- v     Wakeup caused by ULP program");
+    break;
+  default:
+    log("--------------- v     Wakeup was not caused by deep sleep");
+    break;
+  }
 }
 
 void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout)
@@ -92,7 +151,7 @@ void getImage(Inkplate &d, const char *server)
   // Set parameters to speed up the download process.
   http.getStream().setNoDelay(true);
   http.getStream().setTimeout(1);
-  const char *headerKeys[] = {"x-test"};
+  const char *headerKeys[] = {"x-sleep-for"};
   const size_t numberOfHeaders = 1;
 
   http.begin(server);
@@ -112,21 +171,21 @@ void getImage(Inkplate &d, const char *server)
         // REMEMBER! You can only use Windows Bitmap file with color depth of 1, 4, 8 or 24 bits with no
         // compression!
         d.println("Image open error");
-        d.display();
       }
-      Serial.printf("%s", http.header("x-test"));
-      d.display();
+      Serial.printf("%s | %i", http.header("x-sleep-for").c_str(), http.header("x-sleep-for").toInt());
     }
     else
     {
       log("Invalid response length");
-      d.display();
     }
   }
   else
   {
-    log("HTTP error");
-    d.display();
+    log("HTTP error:");
+    printf("HTTP error: %d\n", httpCode);
+    String payload = http.getString();
+    log("Error response: " + payload);
+    drawErrorMessage(d, "HTTP error: " + String(httpCode));
   }
 }
 
