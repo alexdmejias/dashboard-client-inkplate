@@ -49,6 +49,8 @@ void setup()
 
   handleWakeup(display);
 
+  readConfig(display, filename, config);
+
   if (inDebugMode)
   {
     display.clearDisplay();
@@ -57,8 +59,6 @@ void setup()
   }
   else
   {
-    readConfig(display, filename, config);
-
     connectToWifi(display, config.ssid, config.password, config.wifiTimeout);
 
     // setTime(display);
@@ -131,7 +131,7 @@ void connectToWifi(Inkplate &d, const char *ssid, const char *password, int time
   if (!connectedToWifi)
   {
     log("Failed to connect to WiFi");
-    drawErrorMessage(d, String("Error: Failed to connect to WiFi. SSID: ") + config.ssid);
+    drawErrorMessage(d, String("Error: Failed to connect to WiFi. SSID: ") + ssid);
     stopProgram(d);
   }
 

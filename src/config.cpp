@@ -91,16 +91,23 @@ void saveConfiguration(const char *filename, Config &config)
 
     // BUG: I think that these values are not being properly read and result in a blank file after the first save
     // Set the values in the document
+    log("Setting values in document");
+    log("server: " + String(config.server));
+    log("ssid: " + String(config.ssid));
+    log("password: " + String(config.password));
+    log("wifiTimeout: " + String(config.wifiTimeout));
+    log("sleepTime: " + String(config.sleepTime));
+    log("debug: " + String(config.debug));
+
     doc["server"] = config.server;
     doc["ssid"] = config.ssid;
     doc["password"] = config.password;
     doc["wifiTimeout"] = config.wifiTimeout;
     doc["sleepTime"] = config.sleepTime;
     doc["debug"] = config.debug;
-    // doc["timezone"] = config.timezone;
 
     // Serialize JSON to file
-    if (serializeJson(doc, file) == 0)
+    if (serializeJsonPretty(doc, file) == 0)
     {
         log("Failed to write to file");
     }
@@ -173,25 +180,24 @@ void readSerialCommands(Config &config)
                 log("sleepTime set to: " + String(sleepTime));
             }
         }
-        // else if (command == "timezone")
-        // {
-        //     Serial.println("Enter new timezone:");
-        //     String timezone = Serial.readStringUntil('\n');
-        //     strlcpy(config.timezone, timezone.c_str(), sizeof(config.timezone));
-        //     log("Timezone set to: " + timezone);
-        // }
         else if (command == "save")
         {
             saveConfiguration("/config.txt", config);
             log("Configuration saved");
         }
-        else if (command == "exit")
+        else if (command == "current")
         {
-            // TODO do something here
-            log("Exiting serial commands");
+            log("Current configuration:");
+            log("server: " + String(config.server));
+            log("ssid: " + String(config.ssid));
+            log("password: " + String(config.password));
+            log("wifiTimeout: " + String(config.wifiTimeout));
+            log("sleepTime: " + String(config.sleepTime));
+            log("debug: " + String(config.debug));
         }
         else if (command == "print")
         {
+            log("Printing the contents of the config file, does not reflect current configuration until saved");
             printFile("/config.txt");
         }
         else if (command == "reset")
