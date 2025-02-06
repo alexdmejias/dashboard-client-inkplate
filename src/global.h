@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Arduino.h"
+#include "Inkplate.h"
+
+#define TOUCHPAD_WAKE_MASK (int64_t(1) << GPIO_NUM_34)
 
 struct Config
 {
@@ -14,3 +17,5 @@ struct Config
 };
 
 void log(String msg);
+void stopProgram(Inkplate &d);
+void handleSleep(int time);

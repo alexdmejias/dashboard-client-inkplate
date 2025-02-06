@@ -16,41 +16,31 @@
 #include "time.h"
 #include "global.h"
 #include "draw.h"
+#include "config.h"
 
 Inkplate display(INKPLATE_3BIT);
-SdFile file;
 
 const char *filename = "/config.txt"; // SD library uses 8.3 filenames
-Config config;                        // global configuration object
-
-Config defaultConfig = {
-    "example.com",           // server
-    "fake_password",         // password
-    "my_home_network-5g",    // ssid
-    30,                      // wifiTimeout
-    20,                      // sleepTime
-    true,                    // debug
-    "EST5EDT,M3.2.0,M11.1.0" // timezone
-};
-
-#define TOUCHPAD_WAKE_MASK (int64_t(1) << GPIO_NUM_34)
 
 int sleepFor;
 bool inDebugMode = false;
+Config config;
 
-void readConfig(Inkplate &d, const char *filename, Config &config);
+unsigned long lastTouchpadCheckTime = 0;
+const unsigned long touchpadCheckInterval = 100; // Check every 100 milliseconds
+
 void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout);
-void stopProgram(Inkplate &d);
 void handleWakeup(Inkplate &d);
+void getImage(Inkplate &d, const char *server);
 // void setTime(Inkplate &d);
 // void setTimezone(char *timezone);
-void getImage(Inkplate &d, const char *server);
 
 void setup()
 {
   display.begin(); // Init Inkplate library (you should call this function ONLY ONCE)
 
-  Serial.begin(115200); // Init serial communication
+  display.sdCardInit();
+  Serial.begin(115200);
 
   display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
   display.setIntPin(PAD1, RISING, IO_INT_ADDR);
@@ -83,26 +73,29 @@ void setup()
 
     display.display();
 
-    int a = sleepFor | config.sleepTime;
-    esp_sleep_enable_timer_wakeup(a * 1000000); // Activate wake-up timer
-    esp_sleep_enable_ext1_wakeup(TOUCHPAD_WAKE_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
-    log("Going to sleep for " + String(a) + " seconds");
-    esp_deep_sleep_start(); // Put ESP32 into deep sleep. Program stops here.
-    log("Not going to sleep");
+    handleSleep(sleepFor | config.sleepTime | 3000);
   }
 }
 
 void loop()
 {
-  if (display.readTouchpad(PAD1) || display.readTouchpad(PAD2) || display.readTouchpad(PAD3))
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastTouchpadCheckTime >= touchpadCheckInterval)
   {
-    log("exitting debug mode");
-    inDebugMode = false;
-    ESP.restart();
+    lastTouchpadCheckTime = currentMillis;
+
+    if (display.readTouchpad(PAD1) || display.readTouchpad(PAD2) || display.readTouchpad(PAD3))
+    {
+      log("exiting debug mode");
+      inDebugMode = false;
+      ESP.restart();
+    }
   }
 
-  log("in debug mode");
-  delay(100); // Wait a little bit between readings.
+  if (Serial.available())
+  {
+    readSerialCommands(config);
+  }
 }
 
 void handleWakeup(Inkplate &d)
@@ -134,7 +127,7 @@ void handleWakeup(Inkplate &d)
 void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout)
 {
   log("Connecting to WiFi...");
-  bool connectedToWifi = d.connectWiFi(config.ssid, config.password, config.wifiTimeout, true);
+  bool connectedToWifi = d.connectWiFi(ssid, password, timeout, true);
   if (!connectedToWifi)
   {
     log("Failed to connect to WiFi");
@@ -187,76 +180,6 @@ void getImage(Inkplate &d, const char *server)
     log("Error response: " + payload);
     drawErrorMessage(d, "HTTP error: " + String(httpCode));
   }
-}
-
-void readConfig(Inkplate &d, const char *filename, Config &config)
-{
-  // Init SD card. Display if SD card is init propery or not.
-  if (d.sdCardInit())
-  {
-    log("SD Card ok! Reading data...");
-    // Allocate a temporary JsonDocument
-    JsonDocument doc;
-
-    // Try to load text with max lenght of 200 chars.
-    if (!file.open(filename, O_RDONLY))
-    { // If it fails to open, send error message to display, otherwise read the file.
-      log("File open error");
-      drawErrorMessage(d, "Error: Could not open file");
-      stopProgram(d);
-    }
-    else
-    {
-      char text[501];            // Array where data from SD card is stored (max 500 chars here)
-      int len = file.fileSize(); // Read how big is file that we are opening
-      if (len > 500)
-      {
-        len = 500; // If it's more than 200 bytes (200 chars), limit to max 200 bytes
-      }
-      file.read(text, len); // Read data from file and save it in text array
-      text[len] = 0;        // Put null terminating char at the and of data
-
-      DeserializationError error = deserializeJson(doc, text);
-      if (error)
-      {
-        log("Failed to read file, using default configuration" + String(error.c_str()));
-      }
-
-      log("Copying values to config object");
-      if (!doc["server"].is<const char *>() || !doc["ssid"].is<const char *>() || !doc["password"].is<const char *>())
-      {
-        log("Missing required config values or incorrect type");
-        drawErrorMessage(d, "Error: Missing required config values or incorrect type");
-        stopProgram(d);
-      }
-      strlcpy(config.server, doc["server"], sizeof(config.server));
-      strlcpy(config.ssid, doc["ssid"], sizeof(config.ssid));
-      strlcpy(config.password, doc["password"], sizeof(config.password));
-      // strlcpy(config.timezone, doc["timezone"] | defaultConfig.timezone, sizeof(config.timezone));
-      config.sleepTime = doc["sleepTime"] | defaultConfig.sleepTime;
-      config.wifiTimeout = doc["wifiTimeout"] | defaultConfig.wifiTimeout;
-      config.debug = doc["debug"] | defaultConfig.debug;
-    }
-
-    // TODO should dump all of the config data
-    log("Config data: ");
-    Serial.printf("server: %s\nssid: %s\npassword: %s\n", config.server, config.ssid, config.password);
-  }
-  else
-  {
-    log("SD Card error!");
-    drawErrorMessage(d, "Error: SD Card error");
-    stopProgram(d);
-  }
-}
-
-void stopProgram(Inkplate &d)
-{
-  d.display();
-  d.sdCardSleep();
-  // TODO send into deep sleep
-  while (true)
-    ;
 }
 
 // void setTime(Inkplate &d)
