@@ -89,8 +89,6 @@ void saveConfiguration(const char *filename, Config &config)
     // Allocate a temporary JsonDocument
     JsonDocument doc;
 
-    // BUG: I think that these values are not being properly read and result in a blank file after the first save
-    // Set the values in the document
     log("Setting values in document");
     log("server: " + String(config.server));
     log("ssid: " + String(config.ssid));
