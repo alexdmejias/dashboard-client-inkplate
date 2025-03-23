@@ -1,10 +1,9 @@
-// #include "DisplayWrapper.h"
 #include "config.h"
-// #include "global.h"
-// #include "draw.h"
-#include "SdFat.h"
+#include "global.h"
+
 #include "Arduino.h"
 #include <ArduinoJson.h>
+#include "DisplayWrapper.h"
 // #include "HTTPClient.h"
 // #include "WiFi.h"
 // #include "fonts/FreeSans9pt7b.h"

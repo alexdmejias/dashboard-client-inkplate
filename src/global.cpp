@@ -6,11 +6,11 @@ void log(String msg)
     Serial.println("::::::::::: " + String(msg));
 }
 
-void stopProgram(DisplayWrapper &d)
+void stopProgram()
 {
     // d.display();
     // d.sdCardSleep();
-    handleSleep(3001);
+    // handleSleep(3001);
 }
 
 void handleSleep(int time)

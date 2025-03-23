@@ -1,5 +1,5 @@
-// #include "config.h"
-// #include "global.h"
+#include "global.h"
+#include "config.h"
 
 // Config defaultConfig = {
 //     "example.com",           // server
@@ -11,7 +11,7 @@
 //     "EST5EDT,M3.2.0,M11.1.0" // timezone
 // };
 
-// int MAX_CONFIG_SIZE = 1000;
+int MAX_CONFIG_SIZE = 1000;
 
 // String readUserInput(const char *prompt, unsigned long timeout);
 
@@ -221,29 +221,29 @@
 //     }
 // }
 
-// void printFile(const char *filename)
-// {
-//     SdFile file;
-//     // Open file for reading
-//     if (!file.open(filename, O_RDONLY))
-//     {
-//         log("Failed to read file");
-//         return;
-//     }
+void printFile(const char *filename)
+{
+    SdFile file;
+    // Open file for reading
+    if (!file.open(filename, O_RDONLY))
+    {
+        log("Failed to read file");
+        return;
+    }
 
-//     char buffer[MAX_CONFIG_SIZE];
-//     int bytesRead;
+    char buffer[MAX_CONFIG_SIZE];
+    int bytesRead;
 
-//     // Read and print file content
-//     while ((bytesRead = file.read(buffer, sizeof(buffer) - 1)) > 0)
-//     {
-//         buffer[bytesRead] = '\0'; // Null-terminate the buffer
-//         Serial.println(buffer);
-//     }
+    // Read and print file content
+    while ((bytesRead = file.read(buffer, sizeof(buffer) - 1)) > 0)
+    {
+        buffer[bytesRead] = '\0'; // Null-terminate the buffer
+        Serial.println(buffer);
+    }
 
-//     file.close();
-//     log("File read successfully");
-// }
+    file.close();
+    log("File read successfully");
+}
 
 // String readUserInput(const char *prompt, unsigned long timeout)
 // {

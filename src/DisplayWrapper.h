@@ -1,8 +1,9 @@
-#ifndef DISPLAYWRAPPER_H
-#define DISPLAYWRAPPER_H
-
+#pragma once
+// #ifndef DISPLAYWRAPPER_H
+// #define DISPLAYWRAPPER_H
 #include "config.h"
 #include "global.h"
+#include <Arduino.h>
 
 #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
 #include "Inkplate.h"
@@ -15,12 +16,16 @@
 #error "Unsupported board selection."
 #endif
 
+#include "fonts/FreeSans9pt7b.h"
+#include "fonts/FreeSans12pt7b.h"
+#include "fonts/FreeSans24pt7b.h"
+
 class DisplayWrapper
 {
 public:
     DisplayWrapper();
 
-    //     void begin();
+    void begin();
     //     bool sdCardInit();
     //     void setIntOutput(uint8_t pin, bool state, bool level, bool enable, uint8_t addr);
     //     void setIntPin(uint8_t pad, int level, uint8_t addr);
@@ -40,10 +45,14 @@ public:
     //     bool drawImage(const char *url, int x, int y, uint8_t max_width, bool dither);
     //     bool readTouchpad(uint8_t pad);
     //     void sdCardSleep();
+    // void getStringCenter(String buf, int *a, int *b);
+    // void drawErrorMessage(String message);
+    // void drawImage(const char *server)
+    // bool drawImageFromClient(HTTPClient &httpClient, int32_t len)
 
 private:
     DISPLAY_CLASS display;
     // static uint16_t pngDraw(PNGDRAW *pDraw);
 };
 
-#endif // DISPLAYWRAPPER_H
+// #endif // DISPLAYWRAPPER_H

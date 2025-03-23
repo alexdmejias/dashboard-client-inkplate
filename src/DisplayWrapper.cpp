@@ -1,12 +1,12 @@
-// #include "DisplayWrapper.h"
+#include "DisplayWrapper.h"
 // #include <HTTPClient.h>
 
 // DisplayWrapper::DisplayWrapper() : display() {}
 
-// void DisplayWrapper::begin()
-// {
-//     display.begin();
-// }
+void DisplayWrapper::begin()
+{
+    display.begin();
+}
 
 // bool DisplayWrapper::sdCardInit()
 // {
@@ -156,6 +156,74 @@
 //     // GxEPD2 does not support this method
 //     return false;
 // #endif
+// }
+
+// void DisplayWrapper::getStringCenter(String buf, int *a, int *b)
+// {
+//     int16_t x1, y1;
+//     uint16_t w, h;
+
+//     display.getTextBounds(buf, 0, 0, &x1, &y1, &w, &h);
+//     *a = (display.width() - w) / 2;
+//     *b = (display.height() - h) / 2;
+// }
+
+// void DisplayWrapper::drawErrorMessage(String message)
+// {
+//     display.setTextSize(1);
+//     display.setFont(&FreeSans24pt7b);
+//     display.setTextColor(WHITE);
+//     int centerX;
+//     int centerY;
+//     getStringCenter(d, message, &centerX, &centerY);
+
+//     display.setCursor(centerX, centerY);
+
+//     display.println(message);
+// }
+
+// void DisplayWrapper::drawDebugInfo(Config &config)
+// {
+//     // log("Displaying debug info");
+//     log("Displaying debug info");
+//     display.setTextSize(1);
+//     display.setFont(&FreeSans9pt7b);
+//     display.setTextColor(WHITE);
+//     int centerX;
+//     int centerY;
+//     String debugString = "server: " + String(config.server) + " | ssid: " + config.ssid + " | sleep(secs): " + String(config.sleepTime);
+//     getStringCenter(d, debugString, &centerX, &centerY);
+
+//     display.setCursor(centerX, 810);
+
+//     display.println(debugString);
+// }
+
+// void DisplayWrapper::drawImage(const char *server)
+// {
+//     log("Will display image now");
+
+//     if (!display.drawImage(server, 0, 0, 0, true))
+//     {
+//         log("Image open error");
+//         drawErrorMessage(d, "Error: Could not draw image");
+//     }
+//     log("Image displayed");
+// }
+
+// bool DisplayWrapper::drawImageFromClient(HTTPClient &httpClient, int32_t len)
+// {
+//     log("Will display image now");
+
+//     if (!display.drawImage(httpClient.getStreamPtr(), 0, 0, len, true, false))
+//     {
+//         log("Image open error");
+//         // drawErrorMessage(d, "Error: Could not draw image");
+//         return false;
+//     }
+//     log("Image displayed");
+
+//     return true;
 // }
 
 // uint16_t DisplayWrapper::pngDraw(PNGDRAW *pDraw)
