@@ -3,7 +3,7 @@
 #include "fonts/FreeSans12pt7b.h"
 #include "fonts/FreeSans24pt7b.h"
 
-void getStringCenter(Inkplate &d, String buf, int *a, int *b)
+void getStringCenter(DisplayWrapper &d, String buf, int *a, int *b)
 {
     int16_t x1, y1;
     uint16_t w, h;
@@ -13,11 +13,11 @@ void getStringCenter(Inkplate &d, String buf, int *a, int *b)
     *b = (d.height() - h) / 2;
 }
 
-void drawErrorMessage(Inkplate &d, String message)
+void drawErrorMessage(DisplayWrapper &d, String message)
 {
     d.setTextSize(1);
     d.setFont(&FreeSans24pt7b);
-    d.setTextColor(WHITE, BLACK);
+    d.setTextColor(WHITE);
     int centerX;
     int centerY;
     getStringCenter(d, message, &centerX, &centerY);
@@ -27,13 +27,13 @@ void drawErrorMessage(Inkplate &d, String message)
     d.println(message);
 }
 
-void drawDebugInfo(Inkplate &d, Config &config)
+void drawDebugInfo(DisplayWrapper &d, Config &config)
 {
     // log("Displaying debug info");
     log("Displaying debug info");
     d.setTextSize(1);
     d.setFont(&FreeSans9pt7b);
-    d.setTextColor(WHITE, BLACK);
+    d.setTextColor(WHITE);
     int centerX;
     int centerY;
     String debugString = "server: " + String(config.server) + " | ssid: " + config.ssid + " | sleep(secs): " + String(config.sleepTime);
@@ -44,11 +44,11 @@ void drawDebugInfo(Inkplate &d, Config &config)
     d.println(debugString);
 }
 
-void drawImage(Inkplate &d, const char *server)
+void drawImage(DisplayWrapper &d, const char *server)
 {
     log("Will display image now");
 
-    if (!d.drawPngFromWeb(server, 0, 0, 0, true))
+    if (!d.drawImage(server, 0, 0, 0, true))
     {
         log("Image open error");
         drawErrorMessage(d, "Error: Could not draw image");
@@ -56,11 +56,11 @@ void drawImage(Inkplate &d, const char *server)
     log("Image displayed");
 }
 
-bool drawImageFromClient(Inkplate &d, HTTPClient &httpClient, int32_t len)
+bool drawImageFromClient(DisplayWrapper &d, HTTPClient &httpClient, int32_t len)
 {
     log("Will display image now");
 
-    if (!d.drawPngFromWeb(httpClient.getStreamPtr(), 0, 0, len, true, false))
+    if (!d.drawImage(httpClient.getStreamPtr(), 0, 0, len, true, false))
     {
         log("Image open error");
         // drawErrorMessage(d, "Error: Could not draw image");

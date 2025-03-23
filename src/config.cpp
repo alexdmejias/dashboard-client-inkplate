@@ -1,4 +1,5 @@
 #include "config.h"
+#include "global.h"
 
 Config defaultConfig = {
     "example.com",           // server
@@ -14,7 +15,7 @@ int MAX_CONFIG_SIZE = 1000;
 
 String readUserInput(const char *prompt, unsigned long timeout);
 
-void readConfig(Inkplate &d, const char *filename, Config &config)
+void readConfig(DisplayWrapper &d, const char *filename, Config &config)
 {
     SdFile file;
     // Init SD card. Display if SD card is init propery or not.

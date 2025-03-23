@@ -1,24 +1,19 @@
-// Next 3 lines are a precaution, you can ignore those, and the example would also work without them
-#if !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE10V2)
-#error "Wrong board selection for this example, please select e-radionica Inkplate10 or Soldered Inkplate10 in the boards menu."
-#endif
-
-#include "Inkplate.h"
+#include "DisplayWrapper.h"
+#include "config.h"
+#include "global.h"
+#include "draw.h"
 #include "SdFat.h"
 #include "Arduino.h"
 #include <ArduinoJson.h>
-#include "HTTPClient.h" //Include library for HTTPClient
-#include "WiFi.h"       //Include library for WiFi
+#include "HTTPClient.h"
+#include "WiFi.h"
 #include "fonts/FreeSans9pt7b.h"
 #include "fonts/FreeSans12pt7b.h"
 #include "fonts/FreeSans24pt7b.h"
 #include "driver/rtc_io.h"
 #include "time.h"
-#include "global.h"
-#include "draw.h"
-#include "config.h"
 
-Inkplate display(INKPLATE_3BIT);
+DisplayWrapper display;
 
 const char *filename = "/config.txt"; // SD library uses 8.3 filenames
 
@@ -29,25 +24,18 @@ Config config;
 unsigned long lastTouchpadCheckTime = 0;
 const unsigned long touchpadCheckInterval = 100; // Check every 100 milliseconds
 
-void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout);
-void handleWakeup(Inkplate &d);
-void getImage(Inkplate &d, const char *server);
-// void setTime(Inkplate &d);
-// void setTimezone(char *timezone);
+void connectToWifi(const char *ssid, const char *password, int timeout);
+void handleWakeup();
+void getImage(const char *server);
 
 void setup()
 {
-  display.begin(); // Init Inkplate library (you should call this function ONLY ONCE)
+  display.begin(); // Init display library (you should call this function ONLY ONCE)
 
   display.sdCardInit();
   Serial.begin(115200);
 
-  display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
-  display.setIntPin(PAD1, RISING, IO_INT_ADDR);
-  display.setIntPin(PAD2, RISING, IO_INT_ADDR);
-  display.setIntPin(PAD3, RISING, IO_INT_ADDR);
-
-  handleWakeup(display);
+  handleWakeup();
 
   readConfig(display, filename, config);
 
@@ -59,12 +47,8 @@ void setup()
   }
   else
   {
-    connectToWifi(display, config.ssid, config.password, config.wifiTimeout);
-
-    // setTime(display);
-    // setTimezone(config.timezone);
-    // // drawImage(display, config.server);
-    getImage(display, config.server);
+    connectToWifi(config.ssid, config.password, config.wifiTimeout);
+    getImage(config.server);
 
     if (config.debug)
     {
@@ -72,7 +56,6 @@ void setup()
     }
 
     display.display();
-
     handleSleep(sleepFor | config.sleepTime | 3000);
   }
 }
@@ -84,12 +67,14 @@ void loop()
   {
     lastTouchpadCheckTime = currentMillis;
 
+#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
     if (display.readTouchpad(PAD1) || display.readTouchpad(PAD2) || display.readTouchpad(PAD3))
     {
       log("exiting debug mode");
       inDebugMode = false;
       ESP.restart();
     }
+#endif
   }
 
   if (Serial.available())
@@ -98,50 +83,56 @@ void loop()
   }
 }
 
-void handleWakeup(Inkplate &d)
+void handleWakeup()
 {
   esp_sleep_wakeup_cause_t wakeup_reason;
   wakeup_reason = esp_sleep_get_wakeup_cause();
   switch (wakeup_reason)
   {
   case ESP_SLEEP_WAKEUP_EXT0:
-    log("--------------- v     Wakeup caused by external signal using RTC_IO");
+    log("Wakeup caused by external signal using RTC_IO");
     break;
   case ESP_SLEEP_WAKEUP_TIMER:
-    log("--------------- v     Wakeup caused by timer");
+    log("Wakeup caused by timer");
     break;
   case ESP_SLEEP_WAKEUP_EXT1:
   case ESP_SLEEP_WAKEUP_TOUCHPAD:
-    log("--------------- v     Wakeup caused by touchpad");
+    log("Wakeup caused by touchpad");
     inDebugMode = true;
     break;
   case ESP_SLEEP_WAKEUP_ULP:
-    log("--------------- v     Wakeup caused by ULP program");
+    log("Wakeup caused by ULP program");
     break;
   default:
-    log("--------------- v     Wakeup was not caused by deep sleep");
+    log("Wakeup was not caused by deep sleep");
     break;
   }
 }
 
-void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout)
+void connectToWifi(const char *ssid, const char *password, int timeout)
 {
   log("Connecting to WiFi...");
-  bool connectedToWifi = d.connectWiFi(ssid, password, timeout, true);
-  if (!connectedToWifi)
+  bool connectedToWifi = WiFi.begin(ssid, password);
+  unsigned long startAttemptTime = millis();
+
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < (unsigned long)(timeout * 1000))
+  {
+    delay(100);
+  }
+
+  if (WiFi.status() != WL_CONNECTED)
   {
     log("Failed to connect to WiFi");
-    drawErrorMessage(d, String("Error: Failed to connect to WiFi. SSID: ") + ssid);
-    stopProgram(d);
+    drawErrorMessage(display, String("Error: Failed to connect to WiFi. SSID: ") + ssid);
+    // stopProgram(display);
   }
 
   log("Connected to WiFi");
 }
 
-void getImage(Inkplate &d, const char *server)
+void getImage(const char *server)
 {
   HTTPClient http;
-  // Set parameters to speed up the download process.
   http.getStream().setNoDelay(true);
   http.getStream().setTimeout(1);
   const char *headerKeys[] = {"x-sleep-for"};
@@ -150,20 +141,15 @@ void getImage(Inkplate &d, const char *server)
   http.begin(server);
   http.collectHeaders(headerKeys, numberOfHeaders);
 
-  // Check response code.
   int httpCode = http.GET();
   if (httpCode == 200)
   {
-    // Get the response length and make sure it is not 0.
     int32_t len = http.getSize();
     if (len > 0)
     {
-      if (!drawImageFromClient(d, http, len))
+      if (!display.drawImage(server, 0, 0, 0, true))
       {
-        // If is something failed (wrong filename or wrong bitmap format), write error message on the screen.
-        // REMEMBER! You can only use Windows Bitmap file with color depth of 1, 4, 8 or 24 bits with no
-        // compression!
-        d.println("Image open error");
+        display.println("Image open error");
       }
       Serial.printf("%s | %i", http.header("x-sleep-for").c_str(), http.header("x-sleep-for").toInt());
     }
@@ -178,51 +164,6 @@ void getImage(Inkplate &d, const char *server)
     printf("HTTP error: %d\n", httpCode);
     String payload = http.getString();
     log("Error response: " + payload);
-    drawErrorMessage(d, "HTTP error: " + String(httpCode));
+    drawErrorMessage(display, "HTTP error: " + String(httpCode));
   }
 }
-
-// void setTime(Inkplate &d)
-// {
-//   log("Setting RTC time");
-//   // Structure used to hold time information
-//   struct tm timeInfo;
-//   d.getNTPDateTime(&timeInfo);
-//   time_t nowSec;
-//   // Fetch current time in epoch format and store it
-//   d.getNTPEpoch(&nowSec);
-//   // This loop ensures that the NTP time fetched is valid and beyond a certain threshold
-//   log(F("Current time: "));
-//   log(asctime(&timeInfo));
-//   // while (nowSec < 8 * 3600 * 2)
-//   // {
-//   //   delay(500);
-//   //   yield();
-//   //   d.getNTPEpoch(&nowSec);
-//   // }
-//   log("a");
-//   gmtime_r(&nowSec, &timeInfo);
-//   log("b");
-//   d.rtcSetTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec);
-//   d.rtcGetRtcData();
-//   log("c");
-//   log("timeInfo.tm_hour");
-//   log(String(timeInfo.tm_hour, DEC));
-//   log(String(timeInfo.tm_hour));
-//   log("timeInfo.tm_hour");
-//   // d.rtcSetTime(hour, minutes, seconds);    // Send time to RTC
-//   // display.rtcSetDate(weekday, day, month, year); // Send date to RTC
-//   log(d.rtcGetHour());
-//   log("d");
-//   log(String(d.rtcGetHour(), DEC));
-//   Serial.println(d.rtcGetHour());
-//   log("e");
-// }
-
-// https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
-// void setTimezone(char *timezone)
-// {
-//   Serial.printf("  Setting Timezone to %s\n", timezone);
-//   setenv("TZ", timezone, 1); //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
-//   tzset();
-// }

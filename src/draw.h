@@ -1,9 +1,10 @@
 #pragma once
-#include "Inkplate.h"
+#include "DisplayWrapper.h"
 #include "global.h"
+#include <Arduino.h>
 
-void getStringCenter(Inkplate &d, String buf, int *a, int *b);
-void drawErrorMessage(Inkplate &d, String buf);
-void drawDebugInfo(Inkplate &d, Config &config);
-void drawImage(Inkplate &d, const char *server);
-bool drawImageFromClient(Inkplate &d, HTTPClient &httpClient, int32_t len);
+void getStringCenter(DisplayWrapper &d, String buf, int *a, int *b);
+void drawErrorMessage(DisplayWrapper &d, String buf);
+void drawDebugInfo(DisplayWrapper &d, Config &config);
+void drawImage(DisplayWrapper &d, const char *server);
+bool drawImageFromClient(DisplayWrapper &d, HTTPClient &httpClient, int32_t len);
