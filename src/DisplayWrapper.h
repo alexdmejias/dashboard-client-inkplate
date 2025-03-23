@@ -29,11 +29,11 @@ public:
     //     bool sdCardInit();
     //     void setIntOutput(uint8_t pin, bool state, bool level, bool enable, uint8_t addr);
     //     void setIntPin(uint8_t pad, int level, uint8_t addr);
-    //     void clearDisplay();
-    //     void display();
-    //     void setTextSize(uint8_t size);
-    //     void setFont(const GFXfont *font);
-    //     void setTextColor(uint16_t color);
+    void clearDisplay();
+    void display();
+    void setTextSize(uint8_t size);
+    void setFont(const GFXfont *font);
+    void setTextColor(uint16_t color);
     //     void setCursor(int16_t x, int16_t y);
     //     void println(const String &text);
     //     void getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);
@@ -51,7 +51,7 @@ public:
     // bool drawImageFromClient(HTTPClient &httpClient, int32_t len)
 
 private:
-    DISPLAY_CLASS display;
+    DISPLAY_CLASS d;
     // static uint16_t pngDraw(PNGDRAW *pDraw);
 };
 

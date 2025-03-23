@@ -5,7 +5,7 @@
 
 void DisplayWrapper::begin()
 {
-    display.begin();
+    d.begin();
 }
 
 // bool DisplayWrapper::sdCardInit()
@@ -31,30 +31,30 @@ void DisplayWrapper::begin()
 // #endif
 // }
 
-// void DisplayWrapper::clearDisplay()
-// {
-//     display.clearDisplay();
-// }
+void DisplayWrapper::clearDisplay()
+{
+    d.clearDisplay();
+}
 
-// void DisplayWrapper::display()
-// {
-//     display.display();
-// }
+void DisplayWrapper::display()
+{
+    d.display();
+}
 
-// void DisplayWrapper::setTextSize(uint8_t size)
-// {
-//     display.setTextSize(size);
-// }
+void DisplayWrapper::setTextSize(uint8_t size)
+{
+    d.setTextSize(size);
+}
 
-// void DisplayWrapper::setFont(const GFXfont *font)
-// {
-//     display.setFont(font);
-// }
+void DisplayWrapper::setFont(const GFXfont *font)
+{
+    d.setFont(font);
+}
 
-// void DisplayWrapper::setTextColor(uint16_t color)
-// {
-//     display.setTextColor(color);
-// }
+void DisplayWrapper::setTextColor(uint16_t color)
+{
+    d.setTextColor(color);
+}
 
 // void DisplayWrapper::setCursor(int16_t x, int16_t y)
 // {
