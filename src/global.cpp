@@ -1,8 +1,6 @@
 #include "global.h"
 #include <Arduino.h>
 
-#define uS_TO_S_FACTOR 1000000ULL /* Conversion factor for micro seconds to seconds */
-
 void log(String msg)
 {
     Serial.println("::::::::::: " + String(msg));
@@ -12,7 +10,7 @@ void stopProgram(DisplayWrapper &d)
 {
     // d.display();
     // d.sdCardSleep();
-    // handleSleep(3001);
+    handleSleep(3001);
 }
 
 void handleSleep(int time)
