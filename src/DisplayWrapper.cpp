@@ -5,7 +5,12 @@
 
 void DisplayWrapper::begin()
 {
+#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
+    // display.setIntOutput(pin, state, level, enable, addr);
     d.begin();
+#else
+    // GxEPD2 does not support this method
+#endif
 }
 
 // bool DisplayWrapper::sdCardInit()
@@ -33,7 +38,11 @@ void DisplayWrapper::begin()
 
 void DisplayWrapper::clearDisplay()
 {
+#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
     d.clearDisplay();
+#else
+    d.fillScreen(0);
+#endif
 }
 
 void DisplayWrapper::display()
@@ -56,30 +65,96 @@ void DisplayWrapper::setTextColor(uint16_t color)
     d.setTextColor(color);
 }
 
-// void DisplayWrapper::setCursor(int16_t x, int16_t y)
-// {
-//     display.setCursor(x, y);
-// }
+void DisplayWrapper::setCursor(int16_t x, int16_t y)
+{
+    d.setCursor(x, y);
+}
 
-// void DisplayWrapper::println(const String &text)
-// {
-//     display.println(text);
-// }
+void DisplayWrapper::println(const String &text)
+{
+    d.println(text);
+}
 
-// void DisplayWrapper::getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h)
-// {
-//     display.getTextBounds(str.c_str(), x, y, x1, y1, w, h);
-// }
+void DisplayWrapper::getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h)
+{
+    d.getTextBounds(str.c_str(), x, y, x1, y1, w, h);
+}
 
-// int16_t DisplayWrapper::width() const
-// {
-//     return display.width();
-// }
+int16_t DisplayWrapper::width()
+{
+    return d.width();
+}
 
-// int16_t DisplayWrapper::height() const
-// {
-//     return display.height();
-// }
+int16_t DisplayWrapper::height()
+{
+    return d.height();
+}
+
+bool DisplayWrapper::readTouchpad(uint8_t pad)
+{
+#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
+    return d.readTouchpad(pad);
+#else
+    // GxEPD2 does not support this method
+    return false;
+#endif
+}
+
+void DisplayWrapper::getStringCenter(String buf, int *a, int *b)
+{
+    int16_t x1, y1;
+    uint16_t w, h;
+
+    d.getTextBounds(buf, 0, 0, &x1, &y1, &w, &h);
+    *a = (d.width() - w) / 2;
+    *b = (d.height() - h) / 2;
+}
+
+void DisplayWrapper::drawErrorMessage(String message)
+{
+    d.setTextSize(1);
+    d.setFont(&FreeSans24pt7b);
+    d.setTextColor(0xFFFF);
+    int centerX;
+    int centerY;
+    getStringCenter(message, &centerX, &centerY);
+
+    d.setCursor(centerX, centerY);
+
+    d.println(message);
+}
+
+void DisplayWrapper::drawDebugInfo(Config &config)
+{
+    // log("Displaying debug info");
+    log("Displaying debug info");
+    d.setTextSize(1);
+    d.setFont(&FreeSans9pt7b);
+    d.setTextColor(0xFFFF);
+    int centerX;
+    int centerY;
+    String debugString = "server: " + String(config.server) + " | ssid: " + config.ssid + " | sleep(secs): " + String(config.sleepTime);
+    getStringCenter(debugString, &centerX, &centerY);
+
+    d.setCursor(centerX, 810);
+
+    d.println(debugString);
+}
+
+void DisplayWrapper::drawImage(const char *server)
+{
+    log("Will display image now");
+#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
+    if (!d.drawImage(server, 0, 0, 0, true))
+    {
+        log("Image open error");
+        drawErrorMessage("Error: Could not draw image");
+    }
+    log("Image displayed");
+#else
+// GxEPD2 does not support this method
+#endif
+}
 
 // bool DisplayWrapper::drawPngFromWeb(const char *url, int x, int y, uint8_t max_width, bool dither)
 // {
@@ -146,69 +221,6 @@ void DisplayWrapper::setTextColor(uint16_t color)
 //     // Unsupported board
 //     return false;
 // #endif
-// }
-
-// bool DisplayWrapper::readTouchpad(uint8_t pad)
-// {
-// #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
-//     return display.readTouchpad(pad);
-// #else
-//     // GxEPD2 does not support this method
-//     return false;
-// #endif
-// }
-
-// void DisplayWrapper::getStringCenter(String buf, int *a, int *b)
-// {
-//     int16_t x1, y1;
-//     uint16_t w, h;
-
-//     display.getTextBounds(buf, 0, 0, &x1, &y1, &w, &h);
-//     *a = (display.width() - w) / 2;
-//     *b = (display.height() - h) / 2;
-// }
-
-// void DisplayWrapper::drawErrorMessage(String message)
-// {
-//     display.setTextSize(1);
-//     display.setFont(&FreeSans24pt7b);
-//     display.setTextColor(WHITE);
-//     int centerX;
-//     int centerY;
-//     getStringCenter(d, message, &centerX, &centerY);
-
-//     display.setCursor(centerX, centerY);
-
-//     display.println(message);
-// }
-
-// void DisplayWrapper::drawDebugInfo(Config &config)
-// {
-//     // log("Displaying debug info");
-//     log("Displaying debug info");
-//     display.setTextSize(1);
-//     display.setFont(&FreeSans9pt7b);
-//     display.setTextColor(WHITE);
-//     int centerX;
-//     int centerY;
-//     String debugString = "server: " + String(config.server) + " | ssid: " + config.ssid + " | sleep(secs): " + String(config.sleepTime);
-//     getStringCenter(d, debugString, &centerX, &centerY);
-
-//     display.setCursor(centerX, 810);
-
-//     display.println(debugString);
-// }
-
-// void DisplayWrapper::drawImage(const char *server)
-// {
-//     log("Will display image now");
-
-//     if (!display.drawImage(server, 0, 0, 0, true))
-//     {
-//         log("Image open error");
-//         drawErrorMessage(d, "Error: Could not draw image");
-//     }
-//     log("Image displayed");
 // }
 
 // bool DisplayWrapper::drawImageFromClient(HTTPClient &httpClient, int32_t len)

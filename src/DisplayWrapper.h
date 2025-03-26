@@ -11,7 +11,7 @@
 #elif defined(BOARD_GxEPD2)
 #include <GxEPD2_BW.h>
 #include <PNGdec.h>
-#define DISPLAY_CLASS GxEPD2_BW<GxEPD2_213>
+#define DISPLAY_CLASS GxEPD2_BW<GxEPD2_213, GxEPD2_213::HEIGHT>
 #else
 #error "Unsupported board selection."
 #endif
@@ -26,7 +26,7 @@ public:
     DisplayWrapper();
 
     void begin();
-    //     bool sdCardInit();
+    // bool sdCardInit();
     //     void setIntOutput(uint8_t pin, bool state, bool level, bool enable, uint8_t addr);
     //     void setIntPin(uint8_t pad, int level, uint8_t addr);
     void clearDisplay();
@@ -34,20 +34,21 @@ public:
     void setTextSize(uint8_t size);
     void setFont(const GFXfont *font);
     void setTextColor(uint16_t color);
-    //     void setCursor(int16_t x, int16_t y);
-    //     void println(const String &text);
-    //     void getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);
-    //     int16_t width() const;
-    //     int16_t height() const;
+    void setCursor(int16_t x, int16_t y);
+    void println(const String &text);
+    void getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);
+    int16_t width();
+    int16_t height();
     //     bool drawPngFromWeb(const char *url, int x, int y, uint8_t max_width, bool dither);
     //     bool drawPngFromWeb(Stream *stream, int x, int y, int32_t len, bool dither, bool flip);
     //     bool drawPngFromWebGxEPD2(const char *url, int x, int y);
     //     bool drawImage(const char *url, int x, int y, uint8_t max_width, bool dither);
-    //     bool readTouchpad(uint8_t pad);
+    bool readTouchpad(uint8_t pad);
     //     void sdCardSleep();
-    // void getStringCenter(String buf, int *a, int *b);
-    // void drawErrorMessage(String message);
-    // void drawImage(const char *server)
+    void getStringCenter(String buf, int *a, int *b);
+    void drawErrorMessage(String message);
+    void drawDebugInfo(Config &config);
+    void drawImage(const char *server);
     // bool drawImageFromClient(HTTPClient &httpClient, int32_t len)
 
 private:
