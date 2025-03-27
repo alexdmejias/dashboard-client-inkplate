@@ -11,7 +11,7 @@
 #elif defined(BOARD_GxEPD2)
 #include <GxEPD2_BW.h>
 #include <PNGdec.h>
-#define DISPLAY_CLASS GxEPD2_BW<GxEPD2_213, GxEPD2_213::HEIGHT>
+#define DISPLAY_CLASS GxEPD2_BW<GxEPD2_583_T8, GxEPD2_583_T8::HEIGHT>
 #else
 #error "Unsupported board selection."
 #endif
@@ -43,6 +43,7 @@ public:
     //     bool drawPngFromWeb(Stream *stream, int x, int y, int32_t len, bool dither, bool flip);
     //     bool drawPngFromWebGxEPD2(const char *url, int x, int y);
     //     bool drawImage(const char *url, int x, int y, uint8_t max_width, bool dither);
+    bool drawImage(const char *url, int x, int y, uint8_t max_width, bool dither);
     bool readTouchpad(uint8_t pad);
     //     void sdCardSleep();
     void getStringCenter(String buf, int *a, int *b);

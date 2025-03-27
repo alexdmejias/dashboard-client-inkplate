@@ -1,7 +1,19 @@
 #include "DisplayWrapper.h"
-// #include <HTTPClient.h>
+#include <HTTPClient.h>
+#include <WiFiClient.h>
 
-// DisplayWrapper::DisplayWrapper() : display() {}
+#if defined(BOARD_GxEPD2)
+// TODO fix ths pins
+DisplayWrapper::DisplayWrapper() : d(GxEPD2_583_T8(2, 0, 2, 4)) // Initialize the display object with correct parameters
+{
+}
+#elif defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
+DisplayWrapper::DisplayWrapper() : d(DISPLAY_CLASS(INKPLATE_3BIT)) // Initialize the display object for Inkplate
+{
+}
+#else
+#error "Unsupported board selection. Please define BOARD_GxEPD2 or ARDUINO_INKPLATE10/ARDUINO_INKPLATE10V2."
+#endif
 
 void DisplayWrapper::begin()
 {
@@ -126,7 +138,6 @@ void DisplayWrapper::drawErrorMessage(String message)
 
 void DisplayWrapper::drawDebugInfo(Config &config)
 {
-    // log("Displaying debug info");
     log("Displaying debug info");
     d.setTextSize(1);
     d.setFont(&FreeSans9pt7b);
@@ -154,6 +165,84 @@ void DisplayWrapper::drawImage(const char *server)
 #else
 // GxEPD2 does not support this method
 #endif
+}
+
+#if defined(BOARD_GxEPD2)
+// Callback function for PNG decoding (specific to GxEPD2)
+static void pngDraw(PNGDRAW *pDraw)
+{
+    // Get the display object from the user pointer
+    GxEPD2_BW<GxEPD2_583_T8, GxEPD2_583_T8::HEIGHT> *display = (GxEPD2_BW<GxEPD2_583_T8, GxEPD2_583_T8::HEIGHT> *)pDraw->pUser;
+
+    // Iterate over the pixels in the current row
+    for (int x = 0; x < pDraw->iWidth; x++)
+    {
+        uint8_t pixelIndex = pDraw->pPixels[x];       // Get the pixel index
+        uint16_t color = pDraw->pPalette[pixelIndex]; // Get the color from the palette
+        // TODO this is probably wrong
+        display->drawPixel(x, pDraw->y, color); // Draw the pixel
+    }
+}
+#endif
+
+bool DisplayWrapper::drawImage(const char *url, int x, int y, uint8_t max_width, bool dither)
+{
+#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
+    // Inkplate implementation
+    HTTPClient http;
+    http.begin(url);
+    int httpCode = http.GET();
+    if (httpCode == HTTP_CODE_OK)
+    {
+        WiFiClient *stream = http.getStreamPtr();
+        if (!d.drawPngFromWeb(stream, x, y, max_width, dither))
+        {
+            log("Failed to draw PNG on Inkplate");
+            return false;
+        }
+        return true;
+    }
+    else
+    {
+        log("HTTP error while fetching PNG for Inkplate");
+        return false;
+    }
+#elif defined(BOARD_GxEPD2)
+    HTTPClient http;
+    http.begin(url);
+    int httpCode = http.GET();
+    if (httpCode == HTTP_CODE_OK)
+    {
+        WiFiClient *stream = http.getStreamPtr();
+        PNG png;
+        // int rc = png.openRAM(stream, 100, pngDraw);
+        // Read data from the stream into a buffer
+        uint8_t *buffer = new uint8_t[100]; // Adjust size as needed
+        stream->readBytes(reinterpret_cast<char *>(buffer), 100);
+
+        if (png.openRAM(buffer, 100, pngDraw))
+            png.close();
+        delete[] buffer; // Free the allocated memory
+        // png.setUser(&d); // Pass the display object to the PNG decoder
+        if (png.decode(NULL, 0))
+        {
+            log("Failed to decode PNG for GxEPD2");
+            delete[] buffer; // Free the allocated memory
+            return true;
+        }
+        png.close();
+    }
+    else
+    {
+        log("HTTP error while fetching PNG for GxEPD2");
+        return false;
+    }
+#else
+    // Unsupported board
+    log("Unsupported board for drawImage");
+    return false;
+#endif
+    return false; // Ensure all code paths return a value
 }
 
 // bool DisplayWrapper::drawPngFromWeb(const char *url, int x, int y, uint8_t max_width, bool dither)
