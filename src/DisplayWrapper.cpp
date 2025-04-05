@@ -25,28 +25,24 @@ void DisplayWrapper::begin()
 #endif
 }
 
-// bool DisplayWrapper::sdCardInit()
-// {
-//     return display.sdCardInit();
-// }
+bool DisplayWrapper::sdCardInit()
+{
+#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
+    return d.sdCardInit();
+#else
+    // GxEPD2 does not support this method
+    return false;
+#endif
+}
 
-// void DisplayWrapper::setIntOutput(uint8_t pin, bool state, bool level, bool enable, uint8_t addr)
-// {
-// #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
-//     display.setIntOutput(pin, state, level, enable, addr);
-// #else
-//     // GxEPD2 does not support this method
-// #endif
-// }
-
-// void DisplayWrapper::setIntPin(uint8_t pad, int level, uint8_t addr)
-// {
-// #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
-//     display.setIntPin(pad, level, addr);
-// #else
-//     // GxEPD2 does not support this method
-// #endif
-// }
+void DisplayWrapper::sdCardSleep()
+{
+#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
+    display.sdCardSleep();
+#else
+    // GxEPD2 does not support this method
+#endif
+}
 
 void DisplayWrapper::clearDisplay()
 {
@@ -262,13 +258,6 @@ bool DisplayWrapper::drawImage(const char *url, int x, int y, uint8_t max_width,
 // #else
 //     // GxEPD2 does not support this method
 //     return false;
-// #endif
-// }
-
-// void sdCardSleep()
-// {
-// #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
-//     display.sdCardSleep();
 // #endif
 // }
 

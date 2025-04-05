@@ -31,7 +31,7 @@ void setup()
 {
   display.begin(); // Init display library (you should call this function ONLY ONCE)
 
-  // display.sdCardInit();
+  display.sdCardInit();
   Serial.begin(115200);
 
   handleWakeup();

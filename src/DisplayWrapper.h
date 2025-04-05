@@ -26,9 +26,8 @@ public:
     DisplayWrapper();
 
     void begin();
-    // bool sdCardInit();
-    //     void setIntOutput(uint8_t pin, bool state, bool level, bool enable, uint8_t addr);
-    //     void setIntPin(uint8_t pad, int level, uint8_t addr);
+    bool sdCardInit();
+    void sdCardSleep();
     void clearDisplay();
     void display();
     void setTextSize(uint8_t size);
@@ -45,7 +44,7 @@ public:
     //     bool drawImage(const char *url, int x, int y, uint8_t max_width, bool dither);
     bool drawImage(const char *url, int x, int y, uint8_t max_width, bool dither);
     bool readTouchpad(uint8_t pad);
-    //     void sdCardSleep();
+
     void getStringCenter(String buf, int *a, int *b);
     void drawErrorMessage(String message);
     void drawDebugInfo(Config &config);
