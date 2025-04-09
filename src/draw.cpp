@@ -36,7 +36,7 @@ void drawDebugInfo(Inkplate &d, Config &config)
     d.setTextColor(WHITE, BLACK);
     int centerX;
     int centerY;
-    String debugString = "server: " + String(config.server) + " | ssid: " + config.ssid + " | sleep(secs): " + String(config.sleepTime);
+    String debugString = "server: " + String(config.server) + " | ssid: " + config.ssid + " | sleepTime(secs): " + String(config.sleepTime);
     getStringCenter(d, debugString, &centerX, &centerY);
 
     d.setCursor(centerX, 810);

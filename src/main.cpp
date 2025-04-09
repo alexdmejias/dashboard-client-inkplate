@@ -26,8 +26,10 @@ int sleepFor;
 bool inDebugMode = false;
 Config config;
 
+#if defined(ARDUINO_INKPLATE10)
 unsigned long lastTouchpadCheckTime = 0;
 const unsigned long touchpadCheckInterval = 100; // Check every 100 milliseconds
+#endif
 
 void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout);
 void handleWakeup(Inkplate &d);
@@ -39,13 +41,14 @@ void setup()
 {
   display.begin(); // Init Inkplate library (you should call this function ONLY ONCE)
 
-  display.sdCardInit();
   Serial.begin(115200);
 
+#if defined(ARDUINO_INKPLATE10)
   display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
   display.setIntPin(PAD1, RISING, IO_INT_ADDR);
   display.setIntPin(PAD2, RISING, IO_INT_ADDR);
   display.setIntPin(PAD3, RISING, IO_INT_ADDR);
+#endif
 
   handleWakeup(display);
 
@@ -72,13 +75,19 @@ void setup()
     }
 
     display.display();
+    int sleepDuration = sleepFor;
+    if (sleepDuration == 0)
+      sleepDuration = config.sleepTime;
+    if (sleepDuration == 0)
+      sleepDuration = 3000;
 
-    handleSleep(sleepFor | config.sleepTime | 3000);
+    handleSleep(sleepDuration);
   }
 }
 
 void loop()
 {
+#if defined(ARDUINO_INKPLATE10)
   unsigned long currentMillis = millis();
   if (currentMillis - lastTouchpadCheckTime >= touchpadCheckInterval)
   {
@@ -91,6 +100,7 @@ void loop()
       ESP.restart();
     }
   }
+#endif
 
   if (Serial.available())
   {
@@ -111,7 +121,7 @@ void handleWakeup(Inkplate &d)
     log("--------------- v     Wakeup caused by timer");
     break;
   case ESP_SLEEP_WAKEUP_EXT1:
-  case ESP_SLEEP_WAKEUP_TOUCHPAD:
+    // case ESP_SLEEP_WAKEUP_TOUCHPAD:
     log("--------------- v     Wakeup caused by touchpad");
     inDebugMode = true;
     break;
@@ -119,7 +129,7 @@ void handleWakeup(Inkplate &d)
     log("--------------- v     Wakeup caused by ULP program");
     break;
   default:
-    log("--------------- v     Wakeup was not caused by deep sleep");
+    log("--------------- v     Wakeup was not caused by deep sleep, default case");
     break;
   }
 }
