@@ -8,7 +8,7 @@ Config defaultConfig = {
     20,                      // sleepTime
     true,                    // debug
     "EST5EDT,M3.2.0,M11.1.0", // timezone
-    0                        // timezoneOffset (0 = UTC)
+    0.0                      // timezoneOffset (0 = UTC)
 };
 
 int MAX_CONFIG_SIZE = 1000;
@@ -98,7 +98,7 @@ void saveConfiguration(const char *filename, Config &config)
     log("wifiTimeout: " + String(config.wifiTimeout));
     log("sleepTime: " + String(config.sleepTime));
     log("debug: " + String(config.debug));
-    log("timezoneOffset: " + String(config.timezoneOffset));
+    log("timezoneOffset: " + String(config.timezoneOffset, 1));
 
     doc["server"] = config.server;
     doc["ssid"] = config.ssid;
@@ -184,12 +184,12 @@ void readSerialCommands(Config &config)
         }
         else if (command == "timezoneOffset")
         {
-            String timezoneOffsetStr = readUserInput("Enter new timezoneOffset (e.g., -5 for EST, +1 for CET):", 10000);
+            String timezoneOffsetStr = readUserInput("Enter new timezoneOffset (e.g., -5 for EST, +5.5 for IST):", 10000);
             if (!timezoneOffsetStr.isEmpty())
             {
-                int timezoneOffset = timezoneOffsetStr.toInt();
+                float timezoneOffset = timezoneOffsetStr.toFloat();
                 config.timezoneOffset = timezoneOffset;
-                log("timezoneOffset set to: " + String(timezoneOffset));
+                log("timezoneOffset set to: " + String(timezoneOffset, 1));
             }
         }
         else if (command == "save")
@@ -206,7 +206,7 @@ void readSerialCommands(Config &config)
             log("wifiTimeout: " + String(config.wifiTimeout));
             log("sleepTime: " + String(config.sleepTime));
             log("debug: " + String(config.debug));
-            log("timezoneOffset: " + String(config.timezoneOffset));
+            log("timezoneOffset: " + String(config.timezoneOffset, 1));
         }
         else if (command == "print")
         {

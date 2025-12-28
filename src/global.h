@@ -14,7 +14,7 @@ struct Config
     int sleepTime;
     bool debug;
     char timezone[64];
-    int timezoneOffset; // Timezone offset in hours from UTC (e.g., -5 for EST, +1 for CET)
+    float timezoneOffset; // Timezone offset in hours from UTC (e.g., -5 for EST, +5.5 for IST)
 };
 
 void log(String msg);

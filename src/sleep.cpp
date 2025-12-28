@@ -81,8 +81,8 @@ bool isTimeInRange(int currentHour, int currentMinute, const ScheduleEntry &entr
 // Parse sleep interval from header value
 // Supports simple formats like "20s", "5m", "2h", "1d"
 // Also supports schedule format: "00:00-06:00=480 06:00-18:00=15 18:00-24:00=30"
-// timezoneOffset: offset in hours from UTC (e.g., -5 for EST, +1 for CET) to interpret schedule times in local time
-int parseSleepInterval(String headerValue, int timezoneOffset) {
+// timezoneOffset: offset in hours from UTC (e.g., -5 for EST, +5.5 for IST) to interpret schedule times in local time
+int parseSleepInterval(String headerValue, float timezoneOffset) {
   headerValue.trim();
   
   if (headerValue.length() == 0) {
@@ -102,8 +102,14 @@ int parseSleepInterval(String headerValue, int timezoneOffset) {
       return 0;
     }
     
+    // Validate timezone offset to prevent overflow
+    if (timezoneOffset < -12 || timezoneOffset > 14) {
+      log("Invalid timezone offset (must be between -12 and +14): " + String(timezoneOffset));
+      timezoneOffset = 0; // Use UTC as fallback
+    }
+    
     // Apply timezone offset to convert UTC to local time
-    now += (timezoneOffset * 3600);
+    now += (int)(timezoneOffset * 3600);
     
     struct tm timeinfo;
     gmtime_r(&now, &timeinfo);
@@ -114,7 +120,7 @@ int parseSleepInterval(String headerValue, int timezoneOffset) {
     char timeStr[8];
     snprintf(timeStr, sizeof(timeStr), "%02d:%02d", currentHour, currentMinute);
     if (timezoneOffset != 0) {
-      log("Current time (UTC" + String(timezoneOffset >= 0 ? "+" : "") + String(timezoneOffset) + "): " + String(timeStr));
+      log("Current time (UTC" + String(timezoneOffset >= 0 ? "+" : "") + String(timezoneOffset, 1) + "): " + String(timeStr));
     } else {
       log("Current time (UTC): " + String(timeStr));
     }
