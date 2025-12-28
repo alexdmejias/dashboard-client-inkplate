@@ -270,6 +270,7 @@ bool parseScheduleEntry(String entry, ScheduleEntry &result) {
   String intervalStr = entry.substring(equalsPos + 1);
   
   // Parse interval in minutes
+  // Note: toInt() returns 0 for invalid strings, which is caught by the <= 0 check
   result.intervalMinutes = intervalStr.toInt();
   if (result.intervalMinutes <= 0) {
     return false;
@@ -289,6 +290,7 @@ bool parseScheduleEntry(String entry, ScheduleEntry &result) {
   if (startColonPos == -1) {
     return false;
   }
+  // Note: toInt() returns 0 for invalid strings, which is valid and caught by range validation below
   result.startHour = startTime.substring(0, startColonPos).toInt();
   result.startMinute = startTime.substring(startColonPos + 1).toInt();
   
@@ -300,7 +302,7 @@ bool parseScheduleEntry(String entry, ScheduleEntry &result) {
   result.endHour = endTime.substring(0, endColonPos).toInt();
   result.endMinute = endTime.substring(endColonPos + 1).toInt();
   
-  // Validate time values
+  // Validate time values (catches any invalid toInt() results)
   if (result.startHour < 0 || result.startHour > 23 ||
       result.endHour < 0 || result.endHour > 24 ||
       result.startMinute < 0 || result.startMinute > 59 ||
@@ -357,19 +359,20 @@ int parseSleepInterval(String headerValue) {
     int currentMinute = timeinfo.tm_min;
     
     // Format time with zero-padding (e.g., 09:05)
-    char timeStr[6];
+    char timeStr[8];
     snprintf(timeStr, sizeof(timeStr), "%02d:%02d", currentHour, currentMinute);
     log("Current time (UTC): " + String(timeStr));
     
     // Parse each schedule entry
     int startPos = 0;
-    while (startPos < headerValue.length()) {
+    int headerLen = headerValue.length(); // Cache length to avoid repeated calls
+    while (startPos < headerLen) {
       int spacePos = headerValue.indexOf(' ', startPos);
       String entry;
       
       if (spacePos == -1) {
         entry = headerValue.substring(startPos);
-        startPos = headerValue.length();
+        startPos = headerLen;
       } else {
         entry = headerValue.substring(startPos, spacePos);
         startPos = spacePos + 1;
@@ -378,7 +381,8 @@ int parseSleepInterval(String headerValue) {
       ScheduleEntry schedEntry;
       if (parseScheduleEntry(entry, schedEntry)) {
         // Format schedule entry with zero-padded times (e.g., 06:00-18:00=15)
-        char scheduleStr[50];
+        // Buffer sized to handle large interval values safely
+        char scheduleStr[64];
         snprintf(scheduleStr, sizeof(scheduleStr), "%02d:%02d-%02d:%02d=%d minutes",
                  schedEntry.startHour, schedEntry.startMinute,
                  schedEntry.endHour, schedEntry.endMinute,
