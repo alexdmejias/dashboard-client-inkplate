@@ -26,6 +26,9 @@ int sleepFor;
 bool inDebugMode = false;
 Config config;
 
+// Minimum valid Unix timestamp (approx Sep 2001) - used to check if NTP time is synchronized
+const time_t MIN_VALID_TIME = 1000000000;
+
 #if defined(ARDUINO_INKPLATE10)
 unsigned long lastTouchpadCheckTime = 0;
 const unsigned long touchpadCheckInterval = 100; // Check every 100 milliseconds
@@ -83,13 +86,13 @@ void setup()
     // Wait for time synchronization with timeout (max 5 seconds)
     int ntpRetries = 0;
     time_t now = time(nullptr);
-    while (now < 1000000000 && ntpRetries < 10) {
+    while (now < MIN_VALID_TIME && ntpRetries < 10) {
       delay(500);
       now = time(nullptr);
       ntpRetries++;
     }
     
-    if (now >= 1000000000) {
+    if (now >= MIN_VALID_TIME) {
       log("NTP time synchronized successfully");
       struct tm timeinfo;
       gmtime_r(&now, &timeinfo);
@@ -301,6 +304,11 @@ bool parseScheduleEntry(String entry, ScheduleEntry &result) {
     return false;
   }
   
+  // Special case: if endHour is 24 (representing midnight), endMinute must be 0
+  if (result.endHour == 24 && result.endMinute != 0) {
+    return false;
+  }
+  
   return true;
 }
 
@@ -331,7 +339,7 @@ int parseSleepInterval(String headerValue) {
     
     // Get current time
     time_t now = time(nullptr);
-    if (now < 1000000000) {
+    if (now < MIN_VALID_TIME) {
       log("Time not synchronized, cannot use schedule format");
       return 0;
     }
