@@ -13,7 +13,7 @@ struct Config
     int wifiTimeout;
     int sleepTime;
     bool debug;
-    char timezone[64];
+    float timezoneOffset; // Timezone offset in hours from UTC (e.g., -5 for EST, +5.5 for IST)
 };
 
 void log(String msg);

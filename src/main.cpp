@@ -17,12 +17,13 @@
 #include "global.h"
 #include "draw.h"
 #include "config.h"
+#include "sleep.h"
 
 Inkplate display(INKPLATE_3BIT);
 
 const char *filename = "/config.txt"; // SD library uses 8.3 filenames
 
-int sleepFor;
+int sleepFor = 0; // Sleep interval in seconds, 0 means use config.sleepTime
 bool inDebugMode = false;
 Config config;
 
@@ -34,8 +35,6 @@ const unsigned long touchpadCheckInterval = 100; // Check every 100 milliseconds
 void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout);
 void handleWakeup(Inkplate &d);
 void getImage(Inkplate &d, const char *server);
-// void setTime(Inkplate &d);
-// void setTimezone(char *timezone);
 
 void setup()
 {
@@ -64,9 +63,30 @@ void setup()
   {
     connectToWifi(display, config.ssid, config.password, config.wifiTimeout);
 
-    // setTime(display);
-    // setTimezone(config.timezone);
-    // // drawImage(display, config.server);
+    // Initialize NTP time synchronization for schedule-based intervals
+    log("Initializing NTP time synchronization...");
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+    
+    // Wait for time synchronization with timeout (max 5 seconds)
+    int ntpRetries = 0;
+    time_t now = time(nullptr);
+    while (now < MIN_VALID_TIME && ntpRetries < 10) {
+      delay(500);
+      now = time(nullptr);
+      ntpRetries++;
+    }
+    
+    if (now >= MIN_VALID_TIME) {
+      log("NTP time synchronized successfully");
+      struct tm timeinfo;
+      gmtime_r(&now, &timeinfo);
+      char timeStr[30];
+      strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
+      log(String("Current time (UTC): ") + timeStr);
+    } else {
+      log("NTP time synchronization failed - schedule-based intervals will not work");
+    }
+
     getImage(display, config.server);
 
     if (config.debug)
@@ -75,11 +95,15 @@ void setup()
     }
 
     display.display();
-    int sleepDuration = sleepFor;
-    if (sleepDuration == 0)
-      sleepDuration = config.sleepTime;
-    if (sleepDuration == 0)
-      sleepDuration = 3000;
+    
+    // Determine sleep duration with fallback chain
+    int sleepDuration = sleepFor; // First priority: HTTP header
+    if (sleepDuration == 0) {
+      sleepDuration = config.sleepTime; // Second priority: config file
+    }
+    if (sleepDuration == 0) {
+      sleepDuration = 3000; // Third priority: default value
+    }
 
     handleSleep(sleepDuration);
   }
@@ -154,8 +178,8 @@ void getImage(Inkplate &d, const char *server)
   // Set parameters to speed up the download process.
   http.getStream().setNoDelay(true);
   http.getStream().setTimeout(1);
-  const char *headerKeys[] = {"x-sleep-for"};
-  const size_t numberOfHeaders = 1;
+  const char *headerKeys[] = {"x-sleep-for", "refresh-interval"};
+  const size_t numberOfHeaders = 2;
 
   http.begin(server);
   http.collectHeaders(headerKeys, numberOfHeaders);
@@ -175,7 +199,28 @@ void getImage(Inkplate &d, const char *server)
         // compression!
         d.println("Image open error");
       }
-      Serial.printf("%s | %i", http.header("x-sleep-for").c_str(), http.header("x-sleep-for").toInt());
+      
+      // Parse sleep interval from HTTP headers
+      String sleepHeader = "";
+      if (http.hasHeader("x-sleep-for")) {
+        sleepHeader = http.header("x-sleep-for");
+        log("Found x-sleep-for header: " + sleepHeader);
+      } else if (http.hasHeader("refresh-interval")) {
+        sleepHeader = http.header("refresh-interval");
+        log("Found refresh-interval header: " + sleepHeader);
+      }
+      
+      if (sleepHeader.length() > 0) {
+        int parsedInterval = parseSleepInterval(sleepHeader, config.timezoneOffset);
+        if (parsedInterval > 0) {
+          sleepFor = parsedInterval;
+          log("Setting sleep interval from header: " + String(sleepFor) + " seconds");
+        } else {
+          log("Failed to parse sleep interval from header, will use config value");
+        }
+      } else {
+        log("No sleep interval header found, will use config value");
+      }
     }
     else
     {
@@ -227,12 +272,4 @@ void getImage(Inkplate &d, const char *server)
 //   log(String(d.rtcGetHour(), DEC));
 //   Serial.println(d.rtcGetHour());
 //   log("e");
-// }
-
-// https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
-// void setTimezone(char *timezone)
-// {
-//   Serial.printf("  Setting Timezone to %s\n", timezone);
-//   setenv("TZ", timezone, 1); //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
-//   tzset();
 // }

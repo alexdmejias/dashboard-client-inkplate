@@ -4,3 +4,4 @@
 .vscode/launch.json
 .vscode/ipch
 src/secrets.h
+_codeql_detected_source_root

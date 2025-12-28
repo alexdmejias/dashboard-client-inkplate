@@ -7,7 +7,7 @@ Config defaultConfig = {
     30,                      // wifiTimeout
     20,                      // sleepTime
     true,                    // debug
-    "EST5EDT,M3.2.0,M11.1.0" // timezone
+    0.0                      // timezoneOffset (0 = UTC)
 };
 
 int MAX_CONFIG_SIZE = 1000;
@@ -58,10 +58,10 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
             strlcpy(config.server, doc["server"], sizeof(config.server));
             strlcpy(config.ssid, doc["ssid"], sizeof(config.ssid));
             strlcpy(config.password, doc["password"], sizeof(config.password));
-            // strlcpy(config.timezone, doc["timezone"] | defaultConfig.timezone, sizeof(config.timezone));
             config.sleepTime = doc["sleepTime"] | defaultConfig.sleepTime;
             config.wifiTimeout = doc["wifiTimeout"] | defaultConfig.wifiTimeout;
             config.debug = doc["debug"] | defaultConfig.debug;
+            config.timezoneOffset = doc["timezoneOffset"] | defaultConfig.timezoneOffset;
         }
 
         // TODO should dump all of the config data
@@ -96,6 +96,7 @@ void saveConfiguration(const char *filename, Config &config)
     log("wifiTimeout: " + String(config.wifiTimeout));
     log("sleepTime: " + String(config.sleepTime));
     log("debug: " + String(config.debug));
+    log("timezoneOffset: " + String(config.timezoneOffset, 1));
 
     doc["server"] = config.server;
     doc["ssid"] = config.ssid;
@@ -103,6 +104,7 @@ void saveConfiguration(const char *filename, Config &config)
     doc["wifiTimeout"] = config.wifiTimeout;
     doc["sleepTime"] = config.sleepTime;
     doc["debug"] = config.debug;
+    doc["timezoneOffset"] = config.timezoneOffset;
 
     // Serialize JSON to file
     if (serializeJsonPretty(doc, file) == 0)
@@ -119,7 +121,7 @@ void readSerialCommands(Config &config)
 {
     if (!hasDisplayedIntroMessage)
     {
-        log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezone, save, exit, print, reset, help");
+        log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezoneOffset, save, exit, print, reset, help");
         hasDisplayedIntroMessage = true;
     }
 
@@ -178,6 +180,16 @@ void readSerialCommands(Config &config)
                 log("sleepTime set to: " + String(sleepTime));
             }
         }
+        else if (command == "timezoneOffset")
+        {
+            String timezoneOffsetStr = readUserInput("Enter new timezoneOffset (e.g., -5 for EST, +5.5 for IST):", 10000);
+            if (!timezoneOffsetStr.isEmpty())
+            {
+                float timezoneOffset = timezoneOffsetStr.toFloat();
+                config.timezoneOffset = timezoneOffset;
+                log("timezoneOffset set to: " + String(timezoneOffset, 1));
+            }
+        }
         else if (command == "save")
         {
             saveConfiguration("/config.txt", config);
@@ -192,6 +204,7 @@ void readSerialCommands(Config &config)
             log("wifiTimeout: " + String(config.wifiTimeout));
             log("sleepTime: " + String(config.sleepTime));
             log("debug: " + String(config.debug));
+            log("timezoneOffset: " + String(config.timezoneOffset, 1));
         }
         else if (command == "print")
         {
@@ -211,7 +224,7 @@ void readSerialCommands(Config &config)
         }
         else if (command == "help")
         {
-            log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezone, save, exit, print, reset, help");
+            log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezoneOffset, save, exit, print, reset, help");
         }
         else
         {
