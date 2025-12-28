@@ -114,11 +114,15 @@ void setup()
     }
 
     display.display();
-    int sleepDuration = sleepFor;
-    if (sleepDuration == 0)
-      sleepDuration = config.sleepTime;
-    if (sleepDuration == 0)
-      sleepDuration = 3000;
+    
+    // Determine sleep duration with fallback chain
+    int sleepDuration = sleepFor; // First priority: HTTP header
+    if (sleepDuration == 0) {
+      sleepDuration = config.sleepTime; // Second priority: config file
+    }
+    if (sleepDuration == 0) {
+      sleepDuration = 3000; // Third priority: default value
+    }
 
     handleSleep(sleepDuration);
   }
@@ -352,7 +356,10 @@ int parseSleepInterval(String headerValue) {
     int currentHour = timeinfo.tm_hour;
     int currentMinute = timeinfo.tm_min;
     
-    log("Current time (UTC): " + String(currentHour) + ":" + String(currentMinute));
+    // Format time with zero-padding (e.g., 09:05)
+    char timeStr[6];
+    snprintf(timeStr, sizeof(timeStr), "%02d:%02d", currentHour, currentMinute);
+    log("Current time (UTC): " + String(timeStr));
     
     // Parse each schedule entry
     int startPos = 0;
@@ -370,9 +377,13 @@ int parseSleepInterval(String headerValue) {
       
       ScheduleEntry schedEntry;
       if (parseScheduleEntry(entry, schedEntry)) {
-        log("Parsed schedule entry: " + String(schedEntry.startHour) + ":" + 
-            String(schedEntry.startMinute) + "-" + String(schedEntry.endHour) + ":" + 
-            String(schedEntry.endMinute) + "=" + String(schedEntry.intervalMinutes) + " minutes");
+        // Format schedule entry with zero-padded times (e.g., 06:00-18:00=15)
+        char scheduleStr[50];
+        snprintf(scheduleStr, sizeof(scheduleStr), "%02d:%02d-%02d:%02d=%d minutes",
+                 schedEntry.startHour, schedEntry.startMinute,
+                 schedEntry.endHour, schedEntry.endMinute,
+                 schedEntry.intervalMinutes);
+        log("Parsed schedule entry: " + String(scheduleStr));
         
         if (isTimeInRange(currentHour, currentMinute, schedEntry)) {
           int intervalSeconds = schedEntry.intervalMinutes * 60;
