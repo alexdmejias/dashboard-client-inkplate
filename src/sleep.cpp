@@ -81,7 +81,8 @@ bool isTimeInRange(int currentHour, int currentMinute, const ScheduleEntry &entr
 // Parse sleep interval from header value
 // Supports simple formats like "20s", "5m", "2h", "1d"
 // Also supports schedule format: "00:00-06:00=480 06:00-18:00=15 18:00-24:00=30"
-int parseSleepInterval(String headerValue) {
+// timezoneOffset: offset in hours from UTC (e.g., -5 for EST, +1 for CET) to interpret schedule times in local time
+int parseSleepInterval(String headerValue, int timezoneOffset) {
   headerValue.trim();
   
   if (headerValue.length() == 0) {
@@ -101,6 +102,9 @@ int parseSleepInterval(String headerValue) {
       return 0;
     }
     
+    // Apply timezone offset to convert UTC to local time
+    now += (timezoneOffset * 3600);
+    
     struct tm timeinfo;
     gmtime_r(&now, &timeinfo);
     int currentHour = timeinfo.tm_hour;
@@ -109,7 +113,11 @@ int parseSleepInterval(String headerValue) {
     // Format time with zero-padding (e.g., 09:05)
     char timeStr[8];
     snprintf(timeStr, sizeof(timeStr), "%02d:%02d", currentHour, currentMinute);
-    log("Current time (UTC): " + String(timeStr));
+    if (timezoneOffset != 0) {
+      log("Current time (UTC" + String(timezoneOffset >= 0 ? "+" : "") + String(timezoneOffset) + "): " + String(timeStr));
+    } else {
+      log("Current time (UTC): " + String(timeStr));
+    }
     
     // Parse each schedule entry
     int startPos = 0;

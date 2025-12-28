@@ -30,6 +30,8 @@ Amount of seconds that the screen should sleep for between refreshes. **Note:** 
 Whether to display configuration being used
 ### wifiTimeout(int)
 Amount of seconds that should be waited before giving up connecting to WIFI
+### timezoneOffset(int)
+**Optional.** Timezone offset in hours from UTC (e.g., `-5` for EST, `+1` for CET, `+5.5` for IST). When specified, schedule-based sleep intervals will be interpreted in local time instead of UTC. Default is `0` (UTC).
 
 ## Dynamic Sleep Intervals
 
@@ -74,7 +76,26 @@ This schedules:
 - 6am to 6pm: Update every 15 minutes
 - 6pm to midnight: Update every 30 minutes
 
-**Note:** Times are in UTC. Time ranges must not wrap over midnight.
+### Timezone Support
+
+By default, schedule times are interpreted as UTC. To use your local timezone, set the `timezoneOffset` parameter in your config.json file:
+
+```json
+{
+  "timezoneOffset": -5
+}
+```
+
+Common timezone offsets:
+- **EST/EDT**: `-5` (Eastern US)
+- **PST/PDT**: `-8` (Pacific US)
+- **CET/CEST**: `+1` (Central Europe)
+- **IST**: `+5.5` (India)
+- **JST**: `+9` (Japan)
+
+With `timezoneOffset: -5`, a schedule of `08:00-17:00=15` will match 8am-5pm EST, not UTC.
+
+**Note:** Time ranges must not wrap over midnight.
 
 ### Fallback Behavior
 The device uses the following priority order for sleep intervals:

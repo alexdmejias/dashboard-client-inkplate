@@ -216,7 +216,7 @@ void getImage(Inkplate &d, const char *server)
       }
       
       if (sleepHeader.length() > 0) {
-        int parsedInterval = parseSleepInterval(sleepHeader);
+        int parsedInterval = parseSleepInterval(sleepHeader, config.timezoneOffset);
         if (parsedInterval > 0) {
           sleepFor = parsedInterval;
           log("Setting sleep interval from header: " + String(sleepFor) + " seconds");
