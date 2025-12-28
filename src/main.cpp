@@ -81,7 +81,7 @@ void setup()
     if (sleepDuration == 0)
       sleepDuration = 3000;
 
-    handleSleep(sleepDuration);
+    handleSleep(sleepDuration, config.wakeButtonPin);
   }
 }
 

@@ -7,7 +7,8 @@ Config defaultConfig = {
     30,                      // wifiTimeout
     20,                      // sleepTime
     true,                    // debug
-    "EST5EDT,M3.2.0,M11.1.0" // timezone
+    "EST5EDT,M3.2.0,M11.1.0", // timezone
+    36                       // wakeButtonPin (GPIO 36)
 };
 
 int MAX_CONFIG_SIZE = 1000;
@@ -62,6 +63,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
             config.sleepTime = doc["sleepTime"] | defaultConfig.sleepTime;
             config.wifiTimeout = doc["wifiTimeout"] | defaultConfig.wifiTimeout;
             config.debug = doc["debug"] | defaultConfig.debug;
+            config.wakeButtonPin = doc["wakeButtonPin"] | defaultConfig.wakeButtonPin;
         }
 
         // TODO should dump all of the config data
@@ -96,6 +98,7 @@ void saveConfiguration(const char *filename, Config &config)
     log("wifiTimeout: " + String(config.wifiTimeout));
     log("sleepTime: " + String(config.sleepTime));
     log("debug: " + String(config.debug));
+    log("wakeButtonPin: " + String(config.wakeButtonPin));
 
     doc["server"] = config.server;
     doc["ssid"] = config.ssid;
@@ -103,6 +106,7 @@ void saveConfiguration(const char *filename, Config &config)
     doc["wifiTimeout"] = config.wifiTimeout;
     doc["sleepTime"] = config.sleepTime;
     doc["debug"] = config.debug;
+    doc["wakeButtonPin"] = config.wakeButtonPin;
 
     // Serialize JSON to file
     if (serializeJsonPretty(doc, file) == 0)
@@ -192,6 +196,7 @@ void readSerialCommands(Config &config)
             log("wifiTimeout: " + String(config.wifiTimeout));
             log("sleepTime: " + String(config.sleepTime));
             log("debug: " + String(config.debug));
+            log("wakeButtonPin: " + String(config.wakeButtonPin));
         }
         else if (command == "print")
         {
