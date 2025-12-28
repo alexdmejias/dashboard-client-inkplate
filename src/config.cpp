@@ -7,7 +7,6 @@ Config defaultConfig = {
     30,                      // wifiTimeout
     20,                      // sleepTime
     true,                    // debug
-    "EST5EDT,M3.2.0,M11.1.0", // timezone
     0.0                      // timezoneOffset (0 = UTC)
 };
 
@@ -59,7 +58,6 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
             strlcpy(config.server, doc["server"], sizeof(config.server));
             strlcpy(config.ssid, doc["ssid"], sizeof(config.ssid));
             strlcpy(config.password, doc["password"], sizeof(config.password));
-            // strlcpy(config.timezone, doc["timezone"] | defaultConfig.timezone, sizeof(config.timezone));
             config.sleepTime = doc["sleepTime"] | defaultConfig.sleepTime;
             config.wifiTimeout = doc["wifiTimeout"] | defaultConfig.wifiTimeout;
             config.debug = doc["debug"] | defaultConfig.debug;

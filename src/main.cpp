@@ -35,8 +35,6 @@ const unsigned long touchpadCheckInterval = 100; // Check every 100 milliseconds
 void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout);
 void handleWakeup(Inkplate &d);
 void getImage(Inkplate &d, const char *server);
-// void setTime(Inkplate &d);
-// void setTimezone(char *timezone);
 
 void setup()
 {
@@ -89,9 +87,6 @@ void setup()
       log("NTP time synchronization failed - schedule-based intervals will not work");
     }
 
-    // setTime(display);
-    // setTimezone(config.timezone);
-    // // drawImage(display, config.server);
     getImage(display, config.server);
 
     if (config.debug)
@@ -277,12 +272,4 @@ void getImage(Inkplate &d, const char *server)
 //   log(String(d.rtcGetHour(), DEC));
 //   Serial.println(d.rtcGetHour());
 //   log("e");
-// }
-
-// https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
-// void setTimezone(char *timezone)
-// {
-//   Serial.printf("  Setting Timezone to %s\n", timezone);
-//   setenv("TZ", timezone, 1); //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
-//   tzset();
 // }
