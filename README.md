@@ -45,4 +45,4 @@ To use the external button wake-up feature:
 3. Press the button to wake the device from deep sleep
 4. Supported GPIO pins for external wake-up (EXT0): 0, 2, 4, 12-15, 25-27, 32-39
 
-**Note:** The wake-up is triggered when the button is pressed (pin goes LOW), so make sure to connect it to GND with no pull-up resistor needed (internal pull-up will be used). 
+**Note:** The wake-up is triggered when the button is pressed (pin goes LOW). Connect the button between the GPIO pin and GND. The ESP32 will automatically enable an internal pull-up resistor on the pin during deep sleep. 
