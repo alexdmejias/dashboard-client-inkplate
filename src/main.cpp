@@ -22,7 +22,7 @@ Inkplate display(INKPLATE_3BIT);
 
 const char *filename = "/config.txt"; // SD library uses 8.3 filenames
 
-int sleepFor;
+int sleepFor = 0; // Sleep interval in seconds, 0 means use config.sleepTime
 bool inDebugMode = false;
 Config config;
 
@@ -313,6 +313,9 @@ bool parseScheduleEntry(String entry, ScheduleEntry &result) {
 }
 
 // Check if current time is within a schedule entry's time range
+// Note: endHour can be 24 (representing 24:00 as midnight), which works correctly
+// because the comparison is exclusive (<) at the end boundary.
+// Example: 18:00-24:00 includes 23:59 but excludes 00:00 (midnight)
 bool isTimeInRange(int currentHour, int currentMinute, const ScheduleEntry &entry) {
   int currentMinutes = currentHour * 60 + currentMinute;
   int startMinutes = entry.startHour * 60 + entry.startMinute;
