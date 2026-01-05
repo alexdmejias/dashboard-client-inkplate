@@ -14,8 +14,9 @@ struct Config
     int sleepTime;
     bool debug;
     char timezone[64];
+    int wakeButtonPin;
 };
 
 void log(String msg);
 void stopProgram(Inkplate &d);
-void handleSleep(int time);
+void handleSleep(int time, int wakeButtonPin);
