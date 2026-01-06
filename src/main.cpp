@@ -25,6 +25,7 @@ const char *filename = "/config.txt"; // SD library uses 8.3 filenames
 int sleepFor;
 bool inDebugMode = false;
 Config config;
+bool wakeButtonWasPressed = false; // Track if button was pressed during wakeup
 
 #if defined(ARDUINO_INKPLATE10)
 unsigned long lastTouchpadCheckTime = 0;
@@ -53,6 +54,20 @@ void setup()
   handleWakeup(display);
 
   readConfig(display, filename, config);
+
+  // Configure wake button pin as input if defined
+  if (config.wakeButtonPin > 0)
+  {
+    pinMode(config.wakeButtonPin, INPUT);
+    log("Wake button configured on pin " + String(config.wakeButtonPin));
+
+    // If button is currently pressed, mark it so we don't immediately trigger in loop
+    if (digitalRead(config.wakeButtonPin) == HIGH)
+    {
+      wakeButtonWasPressed = true;
+      log("Wake button currently pressed - waiting for release");
+    }
+  }
 
   if (inDebugMode)
   {
@@ -96,11 +111,47 @@ void loop()
     if (display.readTouchpad(PAD1) || display.readTouchpad(PAD2) || display.readTouchpad(PAD3))
     {
       log("exiting debug mode");
+      display.clearDisplay();
+      display.setTextColor(WHITE, BLACK);
+      display.setCursor(300, 400);
+      display.setTextSize(2);
+      display.setFont(&FreeSans24pt7b);
+      display.println("Restarting...");
+      display.display();
+      delay(2000); // Give display time to update
       inDebugMode = false;
       ESP.restart();
     }
   }
 #endif
+
+  // Check if wake button is pressed
+  if (config.wakeButtonPin > 0)
+  {
+    bool buttonPressed = digitalRead(config.wakeButtonPin) == HIGH;
+
+    // If button was pressed during wakeup, wait for release
+    if (wakeButtonWasPressed && !buttonPressed)
+    {
+      wakeButtonWasPressed = false;
+      log("Wake button released");
+    }
+    // Only trigger exit if button wasn't pressed during wakeup
+    else if (!wakeButtonWasPressed && buttonPressed)
+    {
+      log("exiting debug mode via wake button");
+      display.clearDisplay();
+      display.setTextColor(WHITE, BLACK);
+      display.setCursor(300, 400);
+      display.setTextSize(2);
+      display.setFont(&FreeSans24pt7b);
+      display.println("Restarting...");
+      display.display();
+      delay(2000); // Give display time to update
+      inDebugMode = false;
+      ESP.restart();
+    }
+  }
 
   if (Serial.available())
   {
@@ -116,6 +167,7 @@ void handleWakeup(Inkplate &d)
   {
   case ESP_SLEEP_WAKEUP_EXT0:
     log("--------------- v     Wakeup caused by external signal using RTC_IO");
+    inDebugMode = true;
     break;
   case ESP_SLEEP_WAKEUP_TIMER:
     log("--------------- v     Wakeup caused by timer");

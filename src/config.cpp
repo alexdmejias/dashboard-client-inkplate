@@ -1,14 +1,16 @@
 #include "config.h"
+#include "fonts/FreeSans12pt7b.h"
+#include "fonts/FreeSans24pt7b.h"
 
 Config defaultConfig = {
-    "example.com",           // server
-    "fake_password",         // password
-    "my_home_network-5g",    // ssid
-    30,                      // wifiTimeout
-    20,                      // sleepTime
-    true,                    // debug
+    "example.com",            // server
+    "fake_password",          // password
+    "my_home_network-5g",     // ssid
+    30,                       // wifiTimeout
+    20,                       // sleepTime
+    true,                     // debug
     "EST5EDT,M3.2.0,M11.1.0", // timezone
-    36                       // wakeButtonPin (GPIO 36)
+    36                        // wakeButtonPin (GPIO 36)
 };
 
 int MAX_CONFIG_SIZE = 1000;
@@ -123,7 +125,9 @@ void readSerialCommands(Config &config)
 {
     if (!hasDisplayedIntroMessage)
     {
-        log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezone, save, exit, print, reset, help");
+        Serial.println("=== Debug Mode Active ===");
+        Serial.println("Type 'help' for list of commands");
+        Serial.println("========================");
         hasDisplayedIntroMessage = true;
     }
 
@@ -214,9 +218,38 @@ void readSerialCommands(Config &config)
             Serial.flush();
             ESP.restart();
         }
+        else if (command == "exit")
+        {
+            log("Exiting debug mode...");
+            extern Inkplate display;
+            display.clearDisplay();
+            display.setTextColor(WHITE, BLACK);
+            display.setCursor(300, 400);
+            display.setTextSize(2);
+            display.setFont(&FreeSans24pt7b);
+            display.println("Restarting...");
+            display.display();
+            delay(2000); // Give display time to update
+            Serial.flush();
+            ESP.restart();
+        }
         else if (command == "help")
         {
-            log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezone, save, exit, print, reset, help");
+            Serial.println("=== Available Serial Commands ===");
+            Serial.println("debug        - Toggle debug info display on/off");
+            Serial.println("ssid         - Set WiFi network name");
+            Serial.println("password     - Set WiFi password");
+            Serial.println("server       - Set image server URL");
+            Serial.println("wifiTimeout  - Set WiFi connection timeout (seconds)");
+            Serial.println("sleepTime    - Set deep sleep duration (seconds)");
+            Serial.println("current      - Display current configuration");
+            Serial.println("save         - Save configuration to SD card");
+            Serial.println("print        - Print raw config file contents");
+            Serial.println("reset        - Reset configuration to defaults");
+            Serial.println("restart      - Restart the device");
+            Serial.println("exit         - Exit debug mode and restart");
+            Serial.println("help         - Show this help message");
+            Serial.println("================================");
         }
         else
         {
