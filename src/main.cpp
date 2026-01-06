@@ -153,7 +153,7 @@ void getImage(Inkplate &d, const char *server)
   HTTPClient http;
   // Set parameters to speed up the download process.
   http.getStream().setNoDelay(true);
-  http.getStream().setTimeout(1);
+  http.getStream().setTimeout(15);  // 15 seconds timeout
   const char *headerKeys[] = {"x-sleep-for"};
   const size_t numberOfHeaders = 1;
 
@@ -188,7 +188,14 @@ void getImage(Inkplate &d, const char *server)
     printf("HTTP error: %d\n", httpCode);
     String payload = http.getString();
     log("Error response: " + payload);
-    drawErrorMessage(d, "HTTP error: " + String(httpCode));
+    if (httpCode == -11)
+    {
+      drawErrorMessage(d, "Timeout reading from server");
+    }
+    else
+    {
+      drawErrorMessage(d, "HTTP error: " + String(httpCode));
+    }
   }
 }
 
