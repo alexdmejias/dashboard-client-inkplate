@@ -17,6 +17,7 @@
 #include "global.h"
 #include "draw.h"
 #include "config.h"
+#include "http_errors.h"
 
 Inkplate display(INKPLATE_3BIT);
 
@@ -153,7 +154,8 @@ void getImage(Inkplate &d, const char *server)
   HTTPClient http;
   // Set parameters to speed up the download process.
   http.getStream().setNoDelay(true);
-  http.getStream().setTimeout(1);
+  const int HTTP_TIMEOUT_SECONDS = 15;  // Timeout for image downloads
+  http.getStream().setTimeout(HTTP_TIMEOUT_SECONDS);
   const char *headerKeys[] = {"x-sleep-for"};
   const size_t numberOfHeaders = 1;
 
@@ -188,7 +190,7 @@ void getImage(Inkplate &d, const char *server)
     printf("HTTP error: %d\n", httpCode);
     String payload = http.getString();
     log("Error response: " + payload);
-    drawErrorMessage(d, "HTTP error: " + String(httpCode));
+    handleHttpError(d, httpCode);
   }
 }
 
