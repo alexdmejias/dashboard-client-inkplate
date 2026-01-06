@@ -154,7 +154,8 @@ void getImage(Inkplate &d, const char *server)
   HTTPClient http;
   // Set parameters to speed up the download process.
   http.getStream().setNoDelay(true);
-  http.getStream().setTimeout(15);  // 15 seconds timeout
+  const int HTTP_TIMEOUT_SECONDS = 15;  // Timeout for image downloads
+  http.getStream().setTimeout(HTTP_TIMEOUT_SECONDS);
   const char *headerKeys[] = {"x-sleep-for"};
   const size_t numberOfHeaders = 1;
 
