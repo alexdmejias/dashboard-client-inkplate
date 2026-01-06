@@ -157,6 +157,9 @@ void getImage(Inkplate &d, const char *server)
   const char *headerKeys[] = {"x-sleep-for"};
   const size_t numberOfHeaders = 1;
 
+  // HTTP error code for read timeout (HTTPC_ERROR_READ_TIMEOUT)
+  const int HTTPC_ERROR_READ_TIMEOUT = -11;
+
   http.begin(server);
   http.collectHeaders(headerKeys, numberOfHeaders);
 
@@ -188,7 +191,7 @@ void getImage(Inkplate &d, const char *server)
     printf("HTTP error: %d\n", httpCode);
     String payload = http.getString();
     log("Error response: " + payload);
-    if (httpCode == -11)
+    if (httpCode == HTTPC_ERROR_READ_TIMEOUT)
     {
       drawErrorMessage(d, "Timeout reading from server");
     }
