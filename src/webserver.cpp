@@ -133,19 +133,19 @@ const char HTML_TEMPLATE[] PROGMEM = R"rawliteral(
             </div>
             <div class="form-group">
                 <label for="wifiTimeout">WiFi Timeout (seconds):</label>
-                <input type="number" id="wifiTimeout" name="wifiTimeout" value="%WIFI_TIMEOUT%" min="1" required>
+                <input type="number" id="wifiTimeout" name="wifiTimeout" value="%WIFI_TIMEOUT%" min="1" max="300" required>
             </div>
             <div class="form-group">
                 <label for="sleepTime">Sleep Time (seconds):</label>
-                <input type="number" id="sleepTime" name="sleepTime" value="%SLEEP_TIME%" min="1" required>
+                <input type="number" id="sleepTime" name="sleepTime" value="%SLEEP_TIME%" min="1" max="86400" required>
             </div>
             <div class="form-group">
                 <label for="debugWindow">Debug Window (seconds):</label>
-                <input type="number" id="debugWindow" name="debugWindow" value="%DEBUG_WINDOW%" min="0" required>
+                <input type="number" id="debugWindow" name="debugWindow" value="%DEBUG_WINDOW%" min="0" max="600" required>
             </div>
             <div class="form-group">
                 <label for="wakeButtonPin">Wake Button Pin (GPIO):</label>
-                <input type="number" id="wakeButtonPin" name="wakeButtonPin" value="%WAKE_BUTTON_PIN%" min="0" required>
+                <input type="number" id="wakeButtonPin" name="wakeButtonPin" value="%WAKE_BUTTON_PIN%" min="0" max="39" required>
             </div>
             <div class="form-group">
                 <input type="checkbox" id="showDebug" name="showDebug" %SHOW_DEBUG_CHECKED%>
@@ -308,6 +308,8 @@ void setupWebServer(AsyncWebServer &server, Config &config) {
             }
             if (doc.containsKey("wakeButtonPin")) {
                 int value = doc["wakeButtonPin"].as<int>();
+                // Note: Not all ESP32 GPIO pins are usable. Pins 6-11 are connected to flash.
+                // Commonly used wake pins include: 0, 2, 4, 12-15, 25-27, 32-39
                 if (value >= 0 && value <= 39) {  // Valid ESP32 GPIO pins
                     config.wakeButtonPin = value;
                 } else {
