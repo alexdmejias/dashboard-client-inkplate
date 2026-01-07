@@ -6,7 +6,7 @@ Config defaultConfig = {
     "my_home_network-5g",     // ssid
     30,                       // wifiTimeout
     20,                       // sleepTime
-    true,                     // debug
+    true,                     // showDebug
     "EST5EDT,M3.2.0,M11.1.0", // timezone
     36,                       // wakeButtonPin (GPIO 36)
     10                        // debugWindow (seconds)
@@ -63,7 +63,21 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
             // strlcpy(config.timezone, doc["timezone"] | defaultConfig.timezone, sizeof(config.timezone));
             config.sleepTime = doc["sleepTime"] | defaultConfig.sleepTime;
             config.wifiTimeout = doc["wifiTimeout"] | defaultConfig.wifiTimeout;
-            config.debug = doc["debug"] | defaultConfig.debug;
+
+            if (doc.containsKey("showDebug"))
+            {
+                config.showDebug = doc["showDebug"] | defaultConfig.showDebug;
+            }
+            else if (doc.containsKey("debug"))
+            {
+                // Backwards compatibility with older config files
+                config.showDebug = doc["debug"] | defaultConfig.showDebug;
+            }
+            else
+            {
+                config.showDebug = defaultConfig.showDebug;
+            }
+
             config.wakeButtonPin = doc["wakeButtonPin"] | defaultConfig.wakeButtonPin;
             config.debugWindow = doc["debugWindow"] | defaultConfig.debugWindow;
         }
@@ -99,7 +113,7 @@ void saveConfiguration(const char *filename, Config &config)
     log("password: " + String(config.password));
     log("wifiTimeout: " + String(config.wifiTimeout));
     log("sleepTime: " + String(config.sleepTime));
-    log("debug: " + String(config.debug));
+    log("showDebug: " + String(config.showDebug));
     log("wakeButtonPin: " + String(config.wakeButtonPin));
     log("debugWindow: " + String(config.debugWindow));
 
@@ -108,7 +122,7 @@ void saveConfiguration(const char *filename, Config &config)
     doc["password"] = config.password;
     doc["wifiTimeout"] = config.wifiTimeout;
     doc["sleepTime"] = config.sleepTime;
-    doc["debug"] = config.debug;
+    doc["showDebug"] = config.showDebug;
     doc["wakeButtonPin"] = config.wakeButtonPin;
     doc["debugWindow"] = config.debugWindow;
 
@@ -127,17 +141,17 @@ void readSerialCommands(Config &config)
 {
     if (!hasDisplayedIntroMessage)
     {
-        log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, debugWindow, timezone, save, exit, print, reset, help");
+        log("Serial commands available are showDebug, ssid, password, server, wifiTimeout, sleepTime, debugWindow, timezone, save, exit, print, reset, help");
         hasDisplayedIntroMessage = true;
     }
 
     if (Serial.available())
     {
         String command = Serial.readStringUntil('\n');
-        if (command == "debug")
+        if (command == "showDebug")
         {
-            config.debug = !config.debug;
-            log("Debug mode: " + String(config.debug));
+            config.showDebug = !config.showDebug;
+            log("Show debug overlay: " + String(config.showDebug));
         }
         else if (command == "ssid")
         {
@@ -209,7 +223,7 @@ void readSerialCommands(Config &config)
             log("password: " + String(config.password));
             log("wifiTimeout: " + String(config.wifiTimeout));
             log("sleepTime: " + String(config.sleepTime));
-            log("debug: " + String(config.debug));
+            log("showDebug: " + String(config.showDebug));
             log("wakeButtonPin: " + String(config.wakeButtonPin));
             log("debugWindow: " + String(config.debugWindow));
         }
@@ -231,7 +245,7 @@ void readSerialCommands(Config &config)
         }
         else if (command == "help")
         {
-            log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, debugWindow, timezone, save, exit, print, reset, help");
+            log("Serial commands available are showDebug, ssid, password, server, wifiTimeout, sleepTime, debugWindow, timezone, save, exit, print, reset, help");
         }
         else
         {

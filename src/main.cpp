@@ -82,7 +82,7 @@ void setup()
     // // drawImage(display, config.server);
     getImage(display, config.server);
 
-    if (config.debug)
+    if (config.showDebug)
     {
       drawDebugInfo(display, config);
     }

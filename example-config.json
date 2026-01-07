@@ -4,7 +4,7 @@
   "password": "your_wifi_password",
   "sleepTime": 300,
   "wifiTimeout": 30,
-  "debug": false,
+  "showDebug": false,
   "wakeButtonPin": 36,
   "debugWindow": 10
 }

@@ -12,7 +12,7 @@ struct Config
     char ssid[64];
     int wifiTimeout;
     int sleepTime;
-    bool debug;
+    bool showDebug;
     char timezone[64];
     int wakeButtonPin;
     int debugWindow;
