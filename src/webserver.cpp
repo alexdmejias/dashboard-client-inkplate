@@ -1,6 +1,7 @@
 #include "webserver.h"
 #include "config.h"
 #include <WiFi.h>
+#include <ArduinoJson.h>
 
 extern Config config;
 

@@ -87,13 +87,13 @@ void setup()
       display.setFont(&FreeSans12pt7b);
       display.setTextColor(WHITE, BLACK);
       
+      int16_t x1, y1;
+      uint16_t w, h;
       int y = 300;
       int lineHeight = 40;
       
       if (connectionMode == "AP") {
         String message1 = "Debug Mode - Access Point";
-        int16_t x1, y1;
-        uint16_t w, h;
         display.getTextBounds(message1, 0, 0, &x1, &y1, &w, &h);
         display.setCursor((display.width() - w) / 2, y);
         display.println(message1);
@@ -106,8 +106,6 @@ void setup()
         y += lineHeight;
       } else {
         String message1 = "Debug Mode";
-        int16_t x1, y1;
-        uint16_t w, h;
         display.getTextBounds(message1, 0, 0, &x1, &y1, &w, &h);
         display.setCursor((display.width() - w) / 2, y);
         display.println(message1);
@@ -115,8 +113,6 @@ void setup()
       }
       
       String message3 = "Connect to: http://" + ipAddress;
-      int16_t x1, y1;
-      uint16_t w, h;
       display.getTextBounds(message3, 0, 0, &x1, &y1, &w, &h);
       display.setCursor((display.width() - w) / 2, y);
       display.println(message3);
