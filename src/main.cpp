@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 #include "HTTPClient.h" //Include library for HTTPClient
 #include "WiFi.h"       //Include library for WiFi
+#include <ESPAsyncWebServer.h>
 #include "fonts/FreeSans9pt7b.h"
 #include "fonts/FreeSans12pt7b.h"
 #include "fonts/FreeSans24pt7b.h"
@@ -18,8 +19,10 @@
 #include "draw.h"
 #include "config.h"
 #include "http_errors.h"
+#include "webserver.h"
 
 Inkplate display(INKPLATE_3BIT);
+AsyncWebServer server(80);
 
 const char *filename = "/config.txt"; // SD library uses 8.3 filenames
 
@@ -69,9 +72,69 @@ void setup()
 
   if (inDebugMode)
   {
-    display.clearDisplay();
-    drawErrorMessage(display, "debug mode, touch any pad to exit");
-    display.display();
+    String ipAddress;
+    String connectionMode;
+    
+    // Connect to WiFi or start AP
+    if (connectToWifiForDebug(display, config.ssid, config.password, config.wifiTimeout, ipAddress, connectionMode))
+    {
+      // Setup web server
+      setupWebServer(server, config);
+      
+      // Display debug mode message with IP address
+      display.clearDisplay();
+      display.setTextSize(1);
+      display.setFont(&FreeSans12pt7b);
+      display.setTextColor(WHITE, BLACK);
+      
+      int y = 300;
+      int lineHeight = 40;
+      
+      if (connectionMode == "AP") {
+        String message1 = "Debug Mode - Access Point";
+        int16_t x1, y1;
+        uint16_t w, h;
+        display.getTextBounds(message1, 0, 0, &x1, &y1, &w, &h);
+        display.setCursor((display.width() - w) / 2, y);
+        display.println(message1);
+        y += lineHeight;
+        
+        String message2 = "SSID: Inkplate-Config";
+        display.getTextBounds(message2, 0, 0, &x1, &y1, &w, &h);
+        display.setCursor((display.width() - w) / 2, y);
+        display.println(message2);
+        y += lineHeight;
+      } else {
+        String message1 = "Debug Mode";
+        int16_t x1, y1;
+        uint16_t w, h;
+        display.getTextBounds(message1, 0, 0, &x1, &y1, &w, &h);
+        display.setCursor((display.width() - w) / 2, y);
+        display.println(message1);
+        y += lineHeight;
+      }
+      
+      String message3 = "Connect to: http://" + ipAddress;
+      int16_t x1, y1;
+      uint16_t w, h;
+      display.getTextBounds(message3, 0, 0, &x1, &y1, &w, &h);
+      display.setCursor((display.width() - w) / 2, y);
+      display.println(message3);
+      y += lineHeight;
+      
+      String message4 = "Touch any pad to exit";
+      display.getTextBounds(message4, 0, 0, &x1, &y1, &w, &h);
+      display.setCursor((display.width() - w) / 2, y);
+      display.println(message4);
+      
+      display.display();
+    }
+    else
+    {
+      display.clearDisplay();
+      drawErrorMessage(display, "debug mode - WiFi/AP failed, touch any pad to exit");
+      display.display();
+    }
   }
   else
   {
