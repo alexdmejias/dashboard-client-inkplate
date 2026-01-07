@@ -57,7 +57,7 @@ The device supports a debug mode that can be activated in two ways:
 2. **Serial Command**: Send the `debug` command via Serial during the debug window
 
 When in debug mode, the device will:
-- Connect to the configured WiFi network, or create an Access Point named "Inkplate-Config" if connection fails
+- Connect to the configured WiFi network, or create an Access Point named "Inkplate-Config" (password: "inkplate123") if connection fails
 - Start a web server on port 80
 - Display the connection information on the e-ink screen
 - Provide a web interface for configuration

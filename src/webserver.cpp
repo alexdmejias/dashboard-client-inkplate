@@ -129,7 +129,7 @@ const char HTML_TEMPLATE[] PROGMEM = R"rawliteral(
             </div>
             <div class="form-group">
                 <label for="password">WiFi Password:</label>
-                <input type="password" id="password" name="password" value="%PASSWORD%" required>
+                <input type="password" id="password" name="password" placeholder="Enter new password to change">
             </div>
             <div class="form-group">
                 <label for="wifiTimeout">WiFi Timeout (seconds):</label>
@@ -225,7 +225,6 @@ String generateHTML(Config &config) {
     String html = String(HTML_TEMPLATE);
     html.replace("%SERVER%", String(config.server));
     html.replace("%SSID%", String(config.ssid));
-    html.replace("%PASSWORD%", String(config.password));
     html.replace("%WIFI_TIMEOUT%", String(config.wifiTimeout));
     html.replace("%SLEEP_TIME%", String(config.sleepTime));
     html.replace("%DEBUG_WINDOW%", String(config.debugWindow));
@@ -266,27 +265,56 @@ void setupWebServer(AsyncWebServer &server, Config &config) {
                 return;
             }
             
-            // Update configuration
-            if (doc.containsKey("server")) {
+            // Validate and update configuration
+            if (doc.containsKey("server") && doc["server"].as<String>().length() > 0) {
                 strlcpy(config.server, doc["server"].as<const char*>(), sizeof(config.server));
             }
-            if (doc.containsKey("ssid")) {
+            if (doc.containsKey("ssid") && doc["ssid"].as<String>().length() > 0) {
                 strlcpy(config.ssid, doc["ssid"].as<const char*>(), sizeof(config.ssid));
             }
-            if (doc.containsKey("password")) {
+            // Only update password if it's not empty (allows keeping existing password)
+            if (doc.containsKey("password") && doc["password"].as<String>().length() > 0) {
                 strlcpy(config.password, doc["password"].as<const char*>(), sizeof(config.password));
             }
             if (doc.containsKey("wifiTimeout")) {
-                config.wifiTimeout = doc["wifiTimeout"].as<int>();
+                int value = doc["wifiTimeout"].as<int>();
+                if (value >= 1 && value <= 300) {  // 1-300 seconds
+                    config.wifiTimeout = value;
+                } else {
+                    log("Invalid wifiTimeout value: " + String(value));
+                    request->send(400, "text/plain", "Invalid wifiTimeout (must be 1-300)");
+                    return;
+                }
             }
             if (doc.containsKey("sleepTime")) {
-                config.sleepTime = doc["sleepTime"].as<int>();
+                int value = doc["sleepTime"].as<int>();
+                if (value >= 1 && value <= 86400) {  // 1-86400 seconds (1 day)
+                    config.sleepTime = value;
+                } else {
+                    log("Invalid sleepTime value: " + String(value));
+                    request->send(400, "text/plain", "Invalid sleepTime (must be 1-86400)");
+                    return;
+                }
             }
             if (doc.containsKey("debugWindow")) {
-                config.debugWindow = doc["debugWindow"].as<int>();
+                int value = doc["debugWindow"].as<int>();
+                if (value >= 0 && value <= 600) {  // 0-600 seconds
+                    config.debugWindow = value;
+                } else {
+                    log("Invalid debugWindow value: " + String(value));
+                    request->send(400, "text/plain", "Invalid debugWindow (must be 0-600)");
+                    return;
+                }
             }
             if (doc.containsKey("wakeButtonPin")) {
-                config.wakeButtonPin = doc["wakeButtonPin"].as<int>();
+                int value = doc["wakeButtonPin"].as<int>();
+                if (value >= 0 && value <= 39) {  // Valid ESP32 GPIO pins
+                    config.wakeButtonPin = value;
+                } else {
+                    log("Invalid wakeButtonPin value: " + String(value));
+                    request->send(400, "text/plain", "Invalid wakeButtonPin (must be 0-39)");
+                    return;
+                }
             }
             if (doc.containsKey("showDebug")) {
                 config.showDebug = doc["showDebug"].as<bool>();
@@ -334,13 +362,15 @@ bool connectToWifiForDebug(Inkplate &d, const char *ssid, const char *password, 
     // If WiFi connection fails, start Access Point
     log("WiFi connection failed, starting Access Point...");
     WiFi.mode(WIFI_AP);
-    bool apStarted = WiFi.softAP("Inkplate-Config");
+    const char* apPassword = "inkplate123";  // Default password for AP
+    bool apStarted = WiFi.softAP("Inkplate-Config", apPassword);
     
     if (apStarted) {
         ipAddress = WiFi.softAPIP().toString();
         connectionMode = "AP";
         log("Access Point started");
         log("SSID: Inkplate-Config");
+        log("Password: " + String(apPassword));
         log("IP Address: " + ipAddress);
         return true;
     }

@@ -104,6 +104,12 @@ void setup()
         display.setCursor((display.width() - w) / 2, y);
         display.println(message2);
         y += lineHeight;
+        
+        String message2b = "Password: inkplate123";
+        display.getTextBounds(message2b, 0, 0, &x1, &y1, &w, &h);
+        display.setCursor((display.width() - w) / 2, y);
+        display.println(message2b);
+        y += lineHeight;
       } else {
         String message1 = "Debug Mode";
         display.getTextBounds(message1, 0, 0, &x1, &y1, &w, &h);
