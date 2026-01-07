@@ -15,6 +15,7 @@ struct Config
     bool debug;
     char timezone[64];
     int wakeButtonPin;
+    int debugWindow;
 };
 
 void log(String msg);

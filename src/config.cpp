@@ -1,14 +1,15 @@
 #include "config.h"
 
 Config defaultConfig = {
-    "example.com",           // server
-    "fake_password",         // password
-    "my_home_network-5g",    // ssid
-    30,                      // wifiTimeout
-    20,                      // sleepTime
-    true,                    // debug
+    "example.com",            // server
+    "fake_password",          // password
+    "my_home_network-5g",     // ssid
+    30,                       // wifiTimeout
+    20,                       // sleepTime
+    true,                     // debug
     "EST5EDT,M3.2.0,M11.1.0", // timezone
-    36                       // wakeButtonPin (GPIO 36)
+    36,                       // wakeButtonPin (GPIO 36)
+    10                        // debugWindow (seconds)
 };
 
 int MAX_CONFIG_SIZE = 1000;
@@ -64,6 +65,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
             config.wifiTimeout = doc["wifiTimeout"] | defaultConfig.wifiTimeout;
             config.debug = doc["debug"] | defaultConfig.debug;
             config.wakeButtonPin = doc["wakeButtonPin"] | defaultConfig.wakeButtonPin;
+            config.debugWindow = doc["debugWindow"] | defaultConfig.debugWindow;
         }
 
         // TODO should dump all of the config data
@@ -99,6 +101,7 @@ void saveConfiguration(const char *filename, Config &config)
     log("sleepTime: " + String(config.sleepTime));
     log("debug: " + String(config.debug));
     log("wakeButtonPin: " + String(config.wakeButtonPin));
+    log("debugWindow: " + String(config.debugWindow));
 
     doc["server"] = config.server;
     doc["ssid"] = config.ssid;
@@ -107,6 +110,7 @@ void saveConfiguration(const char *filename, Config &config)
     doc["sleepTime"] = config.sleepTime;
     doc["debug"] = config.debug;
     doc["wakeButtonPin"] = config.wakeButtonPin;
+    doc["debugWindow"] = config.debugWindow;
 
     // Serialize JSON to file
     if (serializeJsonPretty(doc, file) == 0)
@@ -123,7 +127,7 @@ void readSerialCommands(Config &config)
 {
     if (!hasDisplayedIntroMessage)
     {
-        log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezone, save, exit, print, reset, help");
+        log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, debugWindow, timezone, save, exit, print, reset, help");
         hasDisplayedIntroMessage = true;
     }
 
@@ -182,6 +186,16 @@ void readSerialCommands(Config &config)
                 log("sleepTime set to: " + String(sleepTime));
             }
         }
+        else if (command == "debugWindow")
+        {
+            String debugWindowStr = readUserInput("Enter new debugWindow (seconds):", 10000);
+            if (!debugWindowStr.isEmpty())
+            {
+                int debugWindow = debugWindowStr.toInt();
+                config.debugWindow = debugWindow;
+                log("debugWindow set to: " + String(debugWindow));
+            }
+        }
         else if (command == "save")
         {
             saveConfiguration("/config.txt", config);
@@ -197,6 +211,7 @@ void readSerialCommands(Config &config)
             log("sleepTime: " + String(config.sleepTime));
             log("debug: " + String(config.debug));
             log("wakeButtonPin: " + String(config.wakeButtonPin));
+            log("debugWindow: " + String(config.debugWindow));
         }
         else if (command == "print")
         {
@@ -216,7 +231,7 @@ void readSerialCommands(Config &config)
         }
         else if (command == "help")
         {
-            log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezone, save, exit, print, reset, help");
+            log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, debugWindow, timezone, save, exit, print, reset, help");
         }
         else
         {

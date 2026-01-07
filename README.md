@@ -26,6 +26,8 @@ Wifi SSID to connect to
 Plain text password for the wifi network
 ### sleepTime(int)
 Amount of seconds that the screen should sleep for between refreshes
+### debugWindow(int)
+Seconds to wait after wake for a Serial `debug` command before proceeding. Set to `0` to disable the window.
 ### debug(bool)
 Whether to display configuration being used
 ### wifiTimeout(int)

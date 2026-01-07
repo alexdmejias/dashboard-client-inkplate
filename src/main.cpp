@@ -35,6 +35,7 @@ const unsigned long touchpadCheckInterval = 100; // Check every 100 milliseconds
 void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout);
 void handleWakeup(Inkplate &d);
 void getImage(Inkplate &d, const char *server);
+bool waitForSerialDebugRequest(unsigned long windowMs);
 // void setTime(Inkplate &d);
 // void setTimezone(char *timezone);
 
@@ -54,6 +55,17 @@ void setup()
   handleWakeup(display);
 
   readConfig(display, filename, config);
+
+  int debugWindowSeconds = config.debugWindow;
+  if (debugWindowSeconds < 0)
+  {
+    debugWindowSeconds = 0;
+  }
+  const unsigned long serialDebugWindowMs = static_cast<unsigned long>(debugWindowSeconds) * 1000UL;
+  if (!inDebugMode && serialDebugWindowMs > 0 && waitForSerialDebugRequest(serialDebugWindowMs))
+  {
+    inDebugMode = true;
+  }
 
   if (inDebugMode)
   {
@@ -135,6 +147,36 @@ void handleWakeup(Inkplate &d)
   }
 }
 
+bool waitForSerialDebugRequest(unsigned long windowMs)
+{
+  if (windowMs == 0)
+  {
+    return false;
+  }
+  log("Waiting " + String(windowMs / 1000UL) + " seconds for Serial 'debug' command...");
+  unsigned long start = millis();
+  while (millis() - start < windowMs)
+  {
+    if (Serial.available())
+    {
+      String command = Serial.readStringUntil('\n');
+      command.trim();
+      if (command.equalsIgnoreCase("debug"))
+      {
+        log("Serial debug command received - entering debug mode");
+        return true;
+      }
+
+      log("Serial input ignored during debug window: " + command);
+      Serial.println("Send 'debug' to enter debug mode during the wake window.");
+    }
+
+    delay(10);
+  }
+
+  return false;
+}
+
 void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout)
 {
   log("Connecting to WiFi...");
@@ -154,7 +196,7 @@ void getImage(Inkplate &d, const char *server)
   HTTPClient http;
   // Set parameters to speed up the download process.
   http.getStream().setNoDelay(true);
-  const int HTTP_TIMEOUT_SECONDS = 15;  // Timeout for image downloads
+  const int HTTP_TIMEOUT_SECONDS = 15; // Timeout for image downloads
   http.getStream().setTimeout(HTTP_TIMEOUT_SECONDS);
   const char *headerKeys[] = {"x-sleep-for"};
   const size_t numberOfHeaders = 1;
