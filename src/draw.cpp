@@ -32,7 +32,8 @@ void drawErrorMessage(Inkplate &d, String message, String debugHint)
         int hintCenterX;
         int hintCenterY;
         getStringCenter(d, debugHint, &hintCenterX, &hintCenterY);
-        d.setCursor(hintCenterX, centerY + 60);
+        const int DEBUG_HINT_VERTICAL_OFFSET = 60;
+        d.setCursor(hintCenterX, centerY + DEBUG_HINT_VERTICAL_OFFSET);
         d.println(debugHint);
     }
 }
