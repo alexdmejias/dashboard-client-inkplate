@@ -70,7 +70,7 @@ void setup()
   if (inDebugMode)
   {
     display.clearDisplay();
-    drawErrorMessage(display, "debug mode, touch any pad to exit");
+    drawErrorMessage(display, "debug mode, touch any pad to exit", "Touch any pad to exit and refresh");
     display.display();
   }
   else
@@ -184,7 +184,7 @@ void connectToWifi(Inkplate &d, const char *ssid, const char *password, int time
   if (!connectedToWifi)
   {
     log("Failed to connect to WiFi");
-    drawErrorMessage(d, String("Error: Failed to connect to WiFi. SSID: ") + ssid);
+    drawErrorMessage(d, String("Error: Failed to connect to WiFi. SSID: ") + ssid, "Check SSID and password in config.txt");
     stopProgram(d);
   }
 

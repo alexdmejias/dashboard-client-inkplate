@@ -13,7 +13,7 @@ void getStringCenter(Inkplate &d, String buf, int *a, int *b)
     *b = (d.height() - h) / 2;
 }
 
-void drawErrorMessage(Inkplate &d, String message)
+void drawErrorMessage(Inkplate &d, String message, String debugHint)
 {
     d.setTextSize(1);
     d.setFont(&FreeSans24pt7b);
@@ -23,8 +23,18 @@ void drawErrorMessage(Inkplate &d, String message)
     getStringCenter(d, message, &centerX, &centerY);
 
     d.setCursor(centerX, centerY);
-
     d.println(message);
+
+    // Display debug hint if provided
+    if (debugHint.length() > 0)
+    {
+        d.setFont(&FreeSans12pt7b);
+        int hintCenterX;
+        int hintCenterY;
+        getStringCenter(d, debugHint, &hintCenterX, &hintCenterY);
+        d.setCursor(hintCenterX, centerY + 60);
+        d.println(debugHint);
+    }
 }
 
 void drawDebugInfo(Inkplate &d, Config &config)
@@ -51,7 +61,7 @@ void drawImage(Inkplate &d, const char *server)
     if (!d.drawPngFromWeb(server, 0, 0, 0, true))
     {
         log("Image open error");
-        drawErrorMessage(d, "Error: Could not draw image");
+        drawErrorMessage(d, "Error: Could not draw image", "Check server is returning valid PNG");
     }
     log("Image displayed");
 }
