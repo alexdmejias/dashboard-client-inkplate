@@ -30,7 +30,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
         if (!file.open(filename, O_RDONLY))
         { // If it fails to open, send error message to display, otherwise read the file.
             log("File open error");
-            drawErrorMessage(d, "Error: Could not open file");
+            drawErrorMessage(d, "Error: Could not open file", "Ensure file exists on SD card root");
             stopProgram(d);
         }
         else
@@ -54,7 +54,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
             if (!doc["server"].is<const char *>() || !doc["ssid"].is<const char *>() || !doc["password"].is<const char *>())
             {
                 log("Missing required config values or incorrect type");
-                drawErrorMessage(d, "Error: Missing required config values or incorrect type");
+                drawErrorMessage(d, "Error: Missing required config values or incorrect type", "Verify server, ssid, password fields");
                 stopProgram(d);
             }
             strlcpy(config.server, doc["server"], sizeof(config.server));
@@ -89,7 +89,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
     else
     {
         log("SD Card error!");
-        drawErrorMessage(d, "Error: SD Card error");
+        drawErrorMessage(d, "Error: SD Card error", "Check SD card is inserted properly");
         stopProgram(d);
     }
 }

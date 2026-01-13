@@ -74,8 +74,50 @@ String getHttpErrorMessage(int httpCode)
     return "HTTP error: " + String(httpCode);
 }
 
+String getHttpErrorDebugHint(int httpCode)
+{
+    // Handle negative error codes (HTTPClient library errors)
+    switch (httpCode)
+    {
+    case HTTPC_ERROR_CONNECTION_REFUSED:
+    case HTTPC_ERROR_NOT_CONNECTED:
+    case HTTPC_ERROR_CONNECTION_LOST:
+        return "Check server address in config.txt";
+    case HTTPC_ERROR_READ_TIMEOUT:
+        return "Server may be slow or unreachable";
+    case HTTPC_ERROR_NO_HTTP_SERVER:
+        return "Verify server URL is correct";
+    case HTTPC_ERROR_TOO_LESS_RAM:
+        return "Image may be too large";
+    default:
+        break;
+    }
+
+    // Handle standard HTTP status codes
+    if (httpCode == 401)
+    {
+        return "Check authentication credentials";
+    }
+    else if (httpCode == 404)
+    {
+        return "Verify server endpoint exists";
+    }
+    else if (httpCode == 408 || httpCode == 504)
+    {
+        return "Server may be slow or unreachable";
+    }
+    else if (httpCode >= 500 && httpCode < 600)
+    {
+        return "Server issue - try again later";
+    }
+
+    // Default hint
+    return "Check network and server settings";
+}
+
 void handleHttpError(Inkplate &d, int httpCode)
 {
     String errorMessage = getHttpErrorMessage(httpCode);
-    drawErrorMessage(d, errorMessage);
+    String debugHint = getHttpErrorDebugHint(httpCode);
+    drawErrorMessage(d, errorMessage, debugHint);
 }
