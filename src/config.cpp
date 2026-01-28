@@ -137,11 +137,29 @@ void saveConfiguration(const char *filename, Config &config)
 }
 
 bool hasDisplayedIntroMessage = false;
+void printSerialHelp()
+{
+    log("Serial commands:");
+    log("  showDebug   - Toggle debug overlay on/off");
+    log("  ssid        - Set WiFi SSID");
+    log("  password    - Set WiFi password");
+    log("  server      - Set server address");
+    log("  wifiTimeout - Set WiFi connection timeout (seconds)");
+    log("  sleepTime   - Set sleep time (seconds)");
+    log("  debugWindow - Set debug window duration (seconds)");
+    log("  save        - Save current configuration to SD card");
+    log("  current     - Show current configuration");
+    log("  print       - Print contents of config file");
+    log("  reset       - Reset configuration to default");
+    log("  restart     - Restart the device");
+    log("  help        - Show this help message");
+}
+
 void readSerialCommands(Config &config)
 {
     if (!hasDisplayedIntroMessage)
     {
-        log("Serial commands available are showDebug, ssid, password, server, wifiTimeout, sleepTime, debugWindow, timezone, save, exit, print, reset, help");
+        printSerialHelp();
         hasDisplayedIntroMessage = true;
     }
 
@@ -226,6 +244,7 @@ void readSerialCommands(Config &config)
             log("showDebug: " + String(config.showDebug));
             log("wakeButtonPin: " + String(config.wakeButtonPin));
             log("debugWindow: " + String(config.debugWindow));
+            log("timezone: " + String(config.timezone));
         }
         else if (command == "print")
         {
@@ -245,7 +264,7 @@ void readSerialCommands(Config &config)
         }
         else if (command == "help")
         {
-            log("Serial commands available are showDebug, ssid, password, server, wifiTimeout, sleepTime, debugWindow, timezone, save, exit, print, reset, help");
+            printSerialHelp();
         }
         else
         {
