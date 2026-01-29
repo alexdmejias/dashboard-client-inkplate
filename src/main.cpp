@@ -32,9 +32,9 @@ unsigned long lastTouchpadCheckTime = 0;
 const unsigned long touchpadCheckInterval = 100; // Check every 100 milliseconds
 #endif
 
-void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout);
+void connectToWifi(Inkplate &d, const char *ssid, const char *password, int wifiTimeout);
 void handleWakeup(Inkplate &d);
-void getImage(Inkplate &d, const char *server);
+void getImage(Inkplate &d, const char *server, int httpTimeout);
 bool waitForSerialDebugRequest(unsigned long windowMs);
 // void setTime(Inkplate &d);
 // void setTimezone(char *timezone);
@@ -80,7 +80,7 @@ void setup()
     // setTime(display);
     // setTimezone(config.timezone);
     // // drawImage(display, config.server);
-    getImage(display, config.server);
+    getImage(display, config.server, config.httpTimeout);
 
     if (config.showDebug)
     {
@@ -177,10 +177,10 @@ bool waitForSerialDebugRequest(unsigned long windowMs)
   return false;
 }
 
-void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout)
+void connectToWifi(Inkplate &d, const char *ssid, const char *password, int wifiTimeout)
 {
   log("Connecting to WiFi...");
-  bool connectedToWifi = d.connectWiFi(ssid, password, timeout, true);
+  bool connectedToWifi = d.connectWiFi(ssid, password, wifiTimeout, true);
   if (!connectedToWifi)
   {
     log("Failed to connect to WiFi");
@@ -191,13 +191,14 @@ void connectToWifi(Inkplate &d, const char *ssid, const char *password, int time
   log("Connected to WiFi");
 }
 
-void getImage(Inkplate &d, const char *server)
+void getImage(Inkplate &d, const char *server, int httpTimeout)
 {
   HTTPClient http;
   // Set parameters to speed up the download process.
   http.getStream().setNoDelay(true);
-  const int HTTP_TIMEOUT_SECONDS = 15; // Timeout for image downloads
-  http.getStream().setTimeout(HTTP_TIMEOUT_SECONDS);
+
+  // const int HTTP_TIMEOUT_SECONDS = 15; // Timeout for image downloads
+  http.getStream().setTimeout(httpTimeout);
   const char *headerKeys[] = {"x-sleep-for"};
   const size_t numberOfHeaders = 1;
 

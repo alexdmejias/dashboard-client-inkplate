@@ -10,8 +10,9 @@ struct Config
     char server[64];
     char password[64];
     char ssid[64];
-    int wifiTimeout;
-    int sleepTime;
+    int wifiTimeout; // Timeout for WiFi connection (seconds)
+    int sleepTime;   // Sleep time (seconds)
+    int httpTimeout; // Timeout for HTTP requests (seconds)
     bool showDebug;
     char timezone[64];
     int wakeButtonPin;

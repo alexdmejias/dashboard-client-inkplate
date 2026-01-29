@@ -6,6 +6,7 @@ Config defaultConfig = {
     "my_home_network-5g",     // ssid
     30,                       // wifiTimeout
     20,                       // sleepTime
+    15,                       // httpTimeout (seconds)
     true,                     // showDebug
     "EST5EDT,M3.2.0,M11.1.0", // timezone
     36,                       // wakeButtonPin (GPIO 36)
@@ -63,6 +64,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
             // strlcpy(config.timezone, doc["timezone"] | defaultConfig.timezone, sizeof(config.timezone));
             config.sleepTime = doc["sleepTime"] | defaultConfig.sleepTime;
             config.wifiTimeout = doc["wifiTimeout"] | defaultConfig.wifiTimeout;
+            config.httpTimeout = doc["httpTimeout"] | defaultConfig.httpTimeout;
 
             if (doc.containsKey("showDebug"))
             {
@@ -114,6 +116,7 @@ void saveConfiguration(const char *filename, Config &config)
     log("wifiTimeout: " + String(config.wifiTimeout));
     log("sleepTime: " + String(config.sleepTime));
     log("showDebug: " + String(config.showDebug));
+    log("httpTimeout: " + String(config.httpTimeout));
     log("wakeButtonPin: " + String(config.wakeButtonPin));
     log("debugWindow: " + String(config.debugWindow));
 
@@ -122,6 +125,7 @@ void saveConfiguration(const char *filename, Config &config)
     doc["password"] = config.password;
     doc["wifiTimeout"] = config.wifiTimeout;
     doc["sleepTime"] = config.sleepTime;
+    doc["httpTimeout"] = config.httpTimeout;
     doc["showDebug"] = config.showDebug;
     doc["wakeButtonPin"] = config.wakeButtonPin;
     doc["debugWindow"] = config.debugWindow;
@@ -145,6 +149,7 @@ void printSerialHelp()
     log("  password    - Set WiFi password");
     log("  server      - Set server address");
     log("  wifiTimeout - Set WiFi connection timeout (seconds)");
+    log("  httpTimeout - Set HTTP request timeout (seconds)");
     log("  sleepTime   - Set sleep time (seconds)");
     log("  debugWindow - Set debug window duration (seconds)");
     log("  save        - Save current configuration to SD card");
@@ -208,6 +213,16 @@ void readSerialCommands(Config &config)
                 log("Wifi timeout set to: " + String(wifiTimeout));
             }
         }
+        else if (command == "httpTimeout")
+        {
+            String httpTimeoutStr = readUserInput("Enter new httpTimeout:", 10000);
+            if (!httpTimeoutStr.isEmpty())
+            {
+                int httpTimeout = httpTimeoutStr.toInt();
+                config.httpTimeout = httpTimeout;
+                log("Http timeout set to: " + String(httpTimeout));
+            }
+        }
         else if (command == "sleepTime")
         {
             String sleepTimeStr = readUserInput("Enter new sleepTime:", 10000);
@@ -240,6 +255,7 @@ void readSerialCommands(Config &config)
             log("ssid: " + String(config.ssid));
             log("password: " + String(config.password));
             log("wifiTimeout: " + String(config.wifiTimeout));
+            log("httpTimeout: " + String(config.httpTimeout));
             log("sleepTime: " + String(config.sleepTime));
             log("showDebug: " + String(config.showDebug));
             log("wakeButtonPin: " + String(config.wakeButtonPin));
