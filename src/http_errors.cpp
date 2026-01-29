@@ -1,3 +1,4 @@
+#include <ArduinoJson.h>
 #include "http_errors.h"
 #include "draw.h"
 
@@ -115,9 +116,54 @@ String getHttpErrorDebugHint(int httpCode)
     return "Check network and server settings";
 }
 
-void handleHttpError(Inkplate &d, int httpCode)
+void handleHttpError(Inkplate &d, int httpCode, const String &responseBody)
 {
-    String errorMessage = getHttpErrorMessage(httpCode);
-    String debugHint = getHttpErrorDebugHint(httpCode);
-    drawErrorMessage(d, errorMessage, debugHint);
+    String fullMessage;
+    String debugHint;
+
+    bool usedServerErrorJson = false;
+
+    // Only try to parse JSON for HTTP error status codes
+    if (httpCode >= 400 && responseBody.length() > 0)
+    {
+        StaticJsonDocument<256> doc;
+        DeserializationError err = deserializeJson(doc, responseBody);
+
+        if (!err)
+        {
+            String serverError = doc["error"] | "";
+            String serverMessage = doc["message"] | "";
+            int statusCode = doc["statusCode"] | 0;
+
+            if (serverError.length() > 0 || serverMessage.length() > 0)
+            {
+                // Compose rich message from server fields
+                fullMessage = "";
+                if (serverError.length() > 0)
+                {
+                    fullMessage += "Error: " + serverError;
+                }
+                if (statusCode > 0)
+                {
+                    fullMessage += " | Status Code: " + String(statusCode);
+                }
+
+                // Use server's .message as the debug hint, else fall back to our default below
+                if (serverMessage.length() > 0)
+                {
+                    debugHint = serverMessage;
+                }
+                usedServerErrorJson = true;
+            }
+        }
+    }
+
+    if (!usedServerErrorJson)
+    {
+        // Fallback: show generic error info
+        fullMessage = getHttpErrorMessage(httpCode);
+        debugHint = getHttpErrorDebugHint(httpCode);
+    }
+
+    drawErrorMessage(d, fullMessage, debugHint);
 }

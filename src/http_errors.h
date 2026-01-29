@@ -9,7 +9,7 @@
  * @param d Inkplate display reference
  * @param httpCode The HTTP response code or error code
  */
-void handleHttpError(Inkplate &d, int httpCode);
+void handleHttpError(Inkplate &d, int httpCode, const String &responseBody);
 
 /**
  * Get a user-friendly error message for a given HTTP error code

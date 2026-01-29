@@ -232,7 +232,7 @@ void getImage(Inkplate &d, const char *server)
     printf("HTTP error: %d\n", httpCode);
     String payload = http.getString();
     log("Error response: " + payload);
-    handleHttpError(d, httpCode);
+    handleHttpError(d, httpCode, payload);
   }
 }
 
