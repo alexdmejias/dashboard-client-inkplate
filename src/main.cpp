@@ -193,12 +193,18 @@ void connectToWifi(Inkplate &d, const char *ssid, const char *password, int wifi
 
 void getImage(Inkplate &d, const char *server, int httpTimeout)
 {
+  log("Fetching image from: " + String(server));
+  log("HTTP timeout: " + String(httpTimeout) + " seconds");
+
   HTTPClient http;
   // Set parameters to speed up the download process.
   http.getStream().setNoDelay(true);
 
-  // const int HTTP_TIMEOUT_SECONDS = 15; // Timeout for image downloads
-  http.getStream().setTimeout(httpTimeout);
+  // setTimeout expects milliseconds; httpTimeout is in seconds
+  http.getStream().setTimeout(httpTimeout * 1000UL);
+  // Also set the HTTPClient-level timeout (milliseconds) for connection and response headers
+  http.setTimeout(httpTimeout * 1000);
+
   const char *headerKeys[] = {"x-sleep-for"};
   const size_t numberOfHeaders = 1;
 
@@ -207,32 +213,45 @@ void getImage(Inkplate &d, const char *server, int httpTimeout)
 
   // Check response code.
   int httpCode = http.GET();
+  log("HTTP response code: " + String(httpCode));
+
   if (httpCode == 200)
   {
-    // Get the response length and make sure it is not 0.
+    // Get the response length; -1 means Content-Length was not provided (e.g. chunked transfer)
     int32_t len = http.getSize();
-    if (len > 0)
+    log("Response size: " + (len >= 0 ? String(len) + " bytes" : String("unknown (chunked)")));
+
+    String sleepForHeader = http.header("x-sleep-for");
+    if (sleepForHeader.length() > 0)
+    {
+      sleepFor = sleepForHeader.toInt();
+      log("x-sleep-for header: " + sleepForHeader + " (sleepFor=" + String(sleepFor) + ")");
+    }
+
+    if (len != 0)
     {
       if (!drawImageFromClient(d, http, len))
       {
-        // If is something failed (wrong filename or wrong bitmap format), write error message on the screen.
+        // If something failed (wrong filename or wrong bitmap format), write error message on the screen.
         // REMEMBER! You can only use Windows Bitmap file with color depth of 1, 4, 8 or 24 bits with no
         // compression!
         d.println("Image open error");
       }
-      Serial.printf("%s | %i", http.header("x-sleep-for").c_str(), http.header("x-sleep-for").toInt());
     }
     else
     {
-      log("Invalid response length");
+      log("Invalid response length: 0 bytes");
+      drawErrorMessage(d, "Error: Empty response from server", "Check server is returning a valid image");
     }
   }
   else
   {
-    log("HTTP error:");
-    printf("HTTP error: %d\n", httpCode);
+    log("HTTP error code: " + String(httpCode));
     String payload = http.getString();
-    log("Error response: " + payload);
+    if (payload.length() > 0)
+    {
+      log("Error response body: " + payload);
+    }
     handleHttpError(d, httpCode, payload);
   }
 }
