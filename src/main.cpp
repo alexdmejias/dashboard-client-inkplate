@@ -23,7 +23,7 @@ Inkplate display(INKPLATE_3BIT);
 
 const char *filename = "/config.txt"; // SD library uses 8.3 filenames
 
-int sleepFor;
+int sleepFor = 0; // Set by optional x-sleep-for response header; defaults to 0
 bool inDebugMode = false;
 Config config;
 
@@ -88,11 +88,22 @@ void setup()
     }
 
     display.display();
-    int sleepDuration = sleepFor;
-    if (sleepDuration == 0)
+    int sleepDuration;
+    if (sleepFor > 0)
+    {
+      sleepDuration = sleepFor;
+      log("Sleep duration: " + String(sleepDuration) + "s (from x-sleep-for header)");
+    }
+    else if (config.sleepTime > 0)
+    {
       sleepDuration = config.sleepTime;
-    if (sleepDuration == 0)
+      log("Sleep duration: " + String(sleepDuration) + "s (from config)");
+    }
+    else
+    {
       sleepDuration = 3000;
+      log("Sleep duration: " + String(sleepDuration) + "s (hardcoded default)");
+    }
 
     handleSleep(sleepDuration, config.wakeButtonPin);
   }
