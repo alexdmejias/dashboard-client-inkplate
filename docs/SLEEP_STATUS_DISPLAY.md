@@ -27,20 +27,15 @@ The sleep status screen shows the following information in a centered layout:
 ```
 ┌─────────────────────────────────────────────┐
 │                                             │
-│          Going to Sleep                     │  (Large, 24pt)
-│                                             │
-│                                             │
-│  Sleep Time: 2026-03-10 14:30:00 UTC-5     │  (Medium, 12pt)
-│                                             │
-│  Duration: 2h 30m                           │  (Medium, 12pt)
-│                                             │
-│  Wake Time: 2026-03-10 17:00:00 UTC-5      │  (Medium, 12pt)
-│                                             │
-│                                             │
-│  Touch any pad to wake early                │  (Small, 9pt)
+│          Going to Sleep                     │  (24pt, centered)
+│     2026-03-10 14:30:00 UTC-5              │
+│            for 2h 30m                       │
+│     Wake: 2026-03-10 17:00:00              │
 │                                             │
 └─────────────────────────────────────────────┘
 ```
+
+**Note**: The display uses the existing `drawErrorMessage()` function for consistent styling.
 
 ## Duration Formatting
 
@@ -117,7 +112,8 @@ This feature works whether or not `showSleepStatus` is enabled - touchpad wake-u
 
 ## Technical Details
 
-- Display uses same fonts and styling as error messages
+- Display uses the existing `drawErrorMessage()` function for consistent styling
+- Message formatted inline within `handleSleep()` function in global.cpp
 - Time calculations account for timezone offset
 - Wake time is computed as current_time + sleep_duration
 - Display is refreshed before entering deep sleep
