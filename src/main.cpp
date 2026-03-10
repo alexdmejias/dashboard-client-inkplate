@@ -17,13 +17,14 @@
 #include "global.h"
 #include "draw.h"
 #include "config.h"
+#include "sleep.h"
 #include "http_errors.h"
 
 Inkplate display(INKPLATE_3BIT);
 
 const char *filename = "/config.txt"; // SD library uses 8.3 filenames
 
-int sleepFor = 0; // Set by optional x-sleep-for response header; defaults to 0
+int sleepFor = 0; // Sleep interval in seconds, 0 means use config.sleepTime
 bool inDebugMode = false;
 Config config;
 
@@ -36,8 +37,6 @@ void connectToWifi(Inkplate &d, const char *ssid, const char *password, int wifi
 void handleWakeup(Inkplate &d);
 void getImage(Inkplate &d, const char *server, int httpTimeout);
 bool waitForSerialDebugRequest(unsigned long windowMs);
-// void setTime(Inkplate &d);
-// void setTimezone(char *timezone);
 
 void setup()
 {
@@ -77,9 +76,30 @@ void setup()
   {
     connectToWifi(display, config.ssid, config.password, config.wifiTimeout);
 
-    // setTime(display);
-    // setTimezone(config.timezone);
-    // // drawImage(display, config.server);
+    // Initialize NTP time synchronization for schedule-based intervals
+    log("Initializing NTP time synchronization...");
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+    
+    // Wait for time synchronization with timeout (max 5 seconds)
+    int ntpRetries = 0;
+    time_t now = time(nullptr);
+    while (now < MIN_VALID_TIME && ntpRetries < 10) {
+      delay(500);
+      now = time(nullptr);
+      ntpRetries++;
+    }
+    
+    if (now >= MIN_VALID_TIME) {
+      log("NTP time synchronized successfully");
+      struct tm timeinfo;
+      gmtime_r(&now, &timeinfo);
+      char timeStr[30];
+      strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
+      log(String("Current time (UTC): ") + timeStr);
+    } else {
+      log("NTP time synchronization failed - schedule-based intervals will not work");
+    }
+
     getImage(display, config.server, config.httpTimeout);
 
     if (config.showDebug)
@@ -88,24 +108,17 @@ void setup()
     }
 
     display.display();
-    int sleepDuration;
-    if (sleepFor > 0)
-    {
-      sleepDuration = sleepFor;
-      log("Sleep duration: " + String(sleepDuration) + "s (from x-sleep-for header)");
+    
+    // Determine sleep duration with fallback chain
+    int sleepDuration = sleepFor; // First priority: HTTP header
+    if (sleepDuration == 0) {
+      sleepDuration = config.sleepTime; // Second priority: config file
     }
-    else if (config.sleepTime > 0)
-    {
-      sleepDuration = config.sleepTime;
-      log("Sleep duration: " + String(sleepDuration) + "s (from config)");
-    }
-    else
-    {
-      sleepDuration = 3000;
-      log("Sleep duration: " + String(sleepDuration) + "s (hardcoded default)");
+    if (sleepDuration == 0) {
+      sleepDuration = 3000; // Third priority: default value
     }
 
-    handleSleep(sleepDuration, config.wakeButtonPin);
+    handleSleep(display, sleepDuration, config);
   }
 }
 
@@ -216,8 +229,8 @@ void getImage(Inkplate &d, const char *server, int httpTimeout)
   // Also set the HTTPClient-level timeout (milliseconds) for connection and response headers
   http.setTimeout(httpTimeout * 1000);
 
-  const char *headerKeys[] = {"x-sleep-for"};
-  const size_t numberOfHeaders = 1;
+  const char *headerKeys[] = {"x-sleep-for", "refresh-interval"};
+  const size_t numberOfHeaders = 2;
 
   http.begin(server);
   http.collectHeaders(headerKeys, numberOfHeaders);
@@ -232,11 +245,26 @@ void getImage(Inkplate &d, const char *server, int httpTimeout)
     int32_t len = http.getSize();
     log("Response size: " + (len >= 0 ? String(len) + " bytes" : String("unknown (chunked)")));
 
-    String sleepForHeader = http.header("x-sleep-for");
-    if (sleepForHeader.length() > 0)
-    {
-      sleepFor = sleepForHeader.toInt();
-      log("x-sleep-for header: " + sleepForHeader + " (sleepFor=" + String(sleepFor) + ")");
+    // Parse sleep interval from HTTP headers
+    String sleepHeader = "";
+    if (http.hasHeader("x-sleep-for")) {
+      sleepHeader = http.header("x-sleep-for");
+      log("Found x-sleep-for header: " + sleepHeader);
+    } else if (http.hasHeader("refresh-interval")) {
+      sleepHeader = http.header("refresh-interval");
+      log("Found refresh-interval header: " + sleepHeader);
+    }
+    
+    if (sleepHeader.length() > 0) {
+      int parsedInterval = parseSleepInterval(sleepHeader, config.timezoneOffset);
+      if (parsedInterval > 0) {
+        sleepFor = parsedInterval;
+        log("Setting sleep interval from header: " + String(sleepFor) + " seconds");
+      } else {
+        log("Failed to parse sleep interval from header, will use config value");
+      }
+    } else {
+      log("No sleep interval header found, will use config value");
     }
 
     if (len != 0)

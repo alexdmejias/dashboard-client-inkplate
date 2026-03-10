@@ -8,7 +8,8 @@ Config defaultConfig = {
     20,                       // sleepTime
     15,                       // httpTimeout (seconds)
     true,                     // showDebug
-    "EST5EDT,M3.2.0,M11.1.0", // timezone
+    0.0,                      // timezoneOffset (0 = UTC)
+    false,                    // showSleepStatus (disabled by default)
     36,                       // wakeButtonPin (GPIO 36)
     10                        // debugWindow (seconds)
 };
@@ -61,7 +62,6 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
             strlcpy(config.server, doc["server"], sizeof(config.server));
             strlcpy(config.ssid, doc["ssid"], sizeof(config.ssid));
             strlcpy(config.password, doc["password"], sizeof(config.password));
-            // strlcpy(config.timezone, doc["timezone"] | defaultConfig.timezone, sizeof(config.timezone));
             config.sleepTime = doc["sleepTime"] | defaultConfig.sleepTime;
             config.wifiTimeout = doc["wifiTimeout"] | defaultConfig.wifiTimeout;
             config.httpTimeout = doc["httpTimeout"] | defaultConfig.httpTimeout;
@@ -80,6 +80,8 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
                 config.showDebug = defaultConfig.showDebug;
             }
 
+            config.timezoneOffset = doc["timezoneOffset"] | defaultConfig.timezoneOffset;
+            config.showSleepStatus = doc["showSleepStatus"] | defaultConfig.showSleepStatus;
             config.wakeButtonPin = doc["wakeButtonPin"] | defaultConfig.wakeButtonPin;
             config.debugWindow = doc["debugWindow"] | defaultConfig.debugWindow;
         }
@@ -117,6 +119,8 @@ void saveConfiguration(const char *filename, Config &config)
     log("sleepTime: " + String(config.sleepTime));
     log("showDebug: " + String(config.showDebug));
     log("httpTimeout: " + String(config.httpTimeout));
+    log("timezoneOffset: " + String(config.timezoneOffset, 1));
+    log("showSleepStatus: " + String(config.showSleepStatus));
     log("wakeButtonPin: " + String(config.wakeButtonPin));
     log("debugWindow: " + String(config.debugWindow));
 
@@ -127,6 +131,8 @@ void saveConfiguration(const char *filename, Config &config)
     doc["sleepTime"] = config.sleepTime;
     doc["httpTimeout"] = config.httpTimeout;
     doc["showDebug"] = config.showDebug;
+    doc["timezoneOffset"] = config.timezoneOffset;
+    doc["showSleepStatus"] = config.showSleepStatus;
     doc["wakeButtonPin"] = config.wakeButtonPin;
     doc["debugWindow"] = config.debugWindow;
 
@@ -144,20 +150,22 @@ bool hasDisplayedIntroMessage = false;
 void printSerialHelp()
 {
     log("Serial commands:");
-    log("  showDebug   - Toggle debug overlay on/off");
-    log("  ssid        - Set WiFi SSID");
-    log("  password    - Set WiFi password");
-    log("  server      - Set server address");
-    log("  wifiTimeout - Set WiFi connection timeout (seconds)");
-    log("  httpTimeout - Set HTTP request timeout (seconds)");
-    log("  sleepTime   - Set sleep time (seconds)");
-    log("  debugWindow - Set debug window duration (seconds)");
-    log("  save        - Save current configuration to SD card");
-    log("  current     - Show current configuration");
-    log("  print       - Print contents of config file");
-    log("  reset       - Reset configuration to default");
-    log("  restart     - Restart the device");
-    log("  help        - Show this help message");
+    log("  showDebug       - Toggle debug overlay on/off");
+    log("  ssid            - Set WiFi SSID");
+    log("  password        - Set WiFi password");
+    log("  server          - Set server address");
+    log("  wifiTimeout     - Set WiFi connection timeout (seconds)");
+    log("  httpTimeout     - Set HTTP request timeout (seconds)");
+    log("  sleepTime       - Set sleep time (seconds)");
+    log("  timezoneOffset  - Set timezone offset (hours from UTC)");
+    log("  showSleepStatus - Toggle sleep status display on/off");
+    log("  debugWindow     - Set debug window duration (seconds)");
+    log("  save            - Save current configuration to SD card");
+    log("  current         - Show current configuration");
+    log("  print           - Print contents of config file");
+    log("  reset           - Reset configuration to default");
+    log("  restart         - Restart the device");
+    log("  help            - Show this help message");
 }
 
 void readSerialCommands(Config &config)
@@ -175,6 +183,11 @@ void readSerialCommands(Config &config)
         {
             config.showDebug = !config.showDebug;
             log("Show debug overlay: " + String(config.showDebug));
+        }
+        else if (command == "showSleepStatus")
+        {
+            config.showSleepStatus = !config.showSleepStatus;
+            log("Show sleep status: " + String(config.showSleepStatus));
         }
         else if (command == "ssid")
         {
@@ -233,6 +246,16 @@ void readSerialCommands(Config &config)
                 log("sleepTime set to: " + String(sleepTime));
             }
         }
+        else if (command == "timezoneOffset")
+        {
+            String timezoneOffsetStr = readUserInput("Enter new timezoneOffset (e.g., -5 for EST, +5.5 for IST):", 10000);
+            if (!timezoneOffsetStr.isEmpty())
+            {
+                float timezoneOffset = timezoneOffsetStr.toFloat();
+                config.timezoneOffset = timezoneOffset;
+                log("timezoneOffset set to: " + String(timezoneOffset, 1));
+            }
+        }
         else if (command == "debugWindow")
         {
             String debugWindowStr = readUserInput("Enter new debugWindow (seconds):", 10000);
@@ -258,9 +281,10 @@ void readSerialCommands(Config &config)
             log("httpTimeout: " + String(config.httpTimeout));
             log("sleepTime: " + String(config.sleepTime));
             log("showDebug: " + String(config.showDebug));
+            log("timezoneOffset: " + String(config.timezoneOffset, 1));
+            log("showSleepStatus: " + String(config.showSleepStatus));
             log("wakeButtonPin: " + String(config.wakeButtonPin));
             log("debugWindow: " + String(config.debugWindow));
-            log("timezone: " + String(config.timezone));
         }
         else if (command == "print")
         {
