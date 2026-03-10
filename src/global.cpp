@@ -26,7 +26,58 @@ void handleSleep(Inkplate &d, int time, Config &config)
     
     // Display sleep status if enabled
     if (config.showSleepStatus && time > 0) {
-        drawSleepStatus(d, time, config.timezoneOffset);
+        d.clearDisplay();
+        
+        // Get current time
+        time_t now = time(nullptr);
+        
+        // Apply timezone offset
+        time_t localNow = now + (int)(config.timezoneOffset * 3600);
+        time_t wakeTime = localNow + time;
+        
+        struct tm sleepTimeInfo;
+        struct tm wakeTimeInfo;
+        gmtime_r(&localNow, &sleepTimeInfo);
+        gmtime_r(&wakeTime, &wakeTimeInfo);
+        
+        // Format times
+        char sleepTimeStr[30];
+        char wakeTimeStr[30];
+        strftime(sleepTimeStr, sizeof(sleepTimeStr), "%Y-%m-%d %H:%M:%S", &sleepTimeInfo);
+        strftime(wakeTimeStr, sizeof(wakeTimeStr), "%Y-%m-%d %H:%M:%S", &wakeTimeInfo);
+        
+        // Format duration in human-readable form
+        String durationStr;
+        if (time >= 86400) {
+            int days = time / 86400;
+            int hours = (time % 86400) / 3600;
+            int minutes = (time % 3600) / 60;
+            durationStr = String(days) + "d " + String(hours) + "h " + String(minutes) + "m";
+        } else if (time >= 3600) {
+            int hours = time / 3600;
+            int minutes = (time % 3600) / 60;
+            durationStr = String(hours) + "h " + String(minutes) + "m";
+        } else if (time >= 60) {
+            int minutes = time / 60;
+            int seconds = time % 60;
+            durationStr = String(minutes) + "m " + String(seconds) + "s";
+        } else {
+            durationStr = String(time) + "s";
+        }
+        
+        // Build timezone label
+        String tzLabel = "UTC";
+        if (config.timezoneOffset != 0) {
+            tzLabel = "UTC" + String(config.timezoneOffset >= 0 ? "+" : "") + String(config.timezoneOffset, 1);
+        }
+        
+        // Create sleep status message
+        String sleepMessage = "Going to Sleep\n" + 
+                             String(sleepTimeStr) + " " + tzLabel + "\n" +
+                             "for " + durationStr + "\n" +
+                             "Wake: " + String(wakeTimeStr);
+        
+        drawErrorMessage(d, sleepMessage);
         d.display();
     }
     
