@@ -85,7 +85,7 @@ String getHttpErrorDebugHint(int httpCode)
     case HTTPC_ERROR_CONNECTION_LOST:
         return "Check server address in config.txt";
     case HTTPC_ERROR_READ_TIMEOUT:
-        return "Server may be slow or unreachable";
+        return "Server too slow or unreachable. Try increasing httpTimeout in config.txt";
     case HTTPC_ERROR_NO_HTTP_SERVER:
         return "Verify server URL is correct";
     case HTTPC_ERROR_TOO_LESS_RAM:
