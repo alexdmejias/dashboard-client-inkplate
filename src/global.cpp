@@ -11,7 +11,8 @@ void stopProgram(Inkplate &d)
 {
     d.display();
     d.sdCardSleep();
-    Config tempConfig = {}; // Create temp config for stopProgram
+    // Use empty config (showSleepStatus=false) - don't show sleep status during error conditions
+    Config tempConfig = {};
     handleSleep(d, 3001, tempConfig);
 }
 
