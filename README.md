@@ -32,6 +32,8 @@ Whether to display configuration being used
 Amount of seconds that should be waited before giving up connecting to WIFI
 ### timezoneOffset(int)
 **Optional.** Timezone offset in hours from UTC (e.g., `-5` for EST, `+1` for CET, `+5.5` for IST). When specified, schedule-based sleep intervals will be interpreted in local time instead of UTC. Default is `0` (UTC).
+### showSleepStatus(bool)
+**Optional.** When enabled, the display will show sleep information before entering deep sleep, including the current time, sleep duration, and expected wake-up time. Default is `false` (disabled).
 
 ## Dynamic Sleep Intervals
 
@@ -131,4 +133,41 @@ The device uses the following priority order for sleep intervals:
 ### Requirements
 - **NTP Time Sync**: Schedule-based intervals require successful NTP time synchronization
 - If time sync fails, schedule formats will fall back to config file settings
-- Simple time formats work without NTP sync 
+- Simple time formats work without NTP sync
+
+### Sleep Status Display
+
+When `showSleepStatus` is enabled in the configuration, the device will display sleep information before entering deep sleep mode:
+
+```json
+{
+  "showSleepStatus": true
+}
+```
+
+The display will show:
+- **Current time** when going to sleep (with timezone)
+- **Sleep duration** in human-readable format (e.g., "2h 30m")
+- **Wake-up time** (calculated based on current time + duration)
+- **Wake-up instruction** (how to manually wake the device early)
+
+This feature is useful for monitoring device status and understanding sleep schedules.
+
+### Manual Wake-Up Mechanisms
+
+The device supports manual wake-up during sleep through the **integrated touchpad buttons**:
+
+#### Touchpad Wake-Up (Recommended)
+- **Inkplate10/10v2**: Built-in touchpads (PAD1, PAD2, PAD3) can wake the device
+- **No hardware changes needed**: Touchpad wake-up is now enabled by default
+- **Usage**: Simply touch any of the three touchpad areas on the device
+- **Response**: Device will immediately wake and enter debug mode, allowing you to reconfigure or restart
+
+#### How It Works
+When the device enters deep sleep with touchpad wake-up enabled:
+1. Touch any of the three touchpads (PAD1, PAD2, PAD3)
+2. Device wakes up and detects touchpad wake source
+3. Enters debug mode with configuration options
+4. Touch touchpad again or restart to resume normal operation
+
+This provides a convenient way to interrupt sleep cycles for maintenance, reconfiguration, or immediate updates without waiting for the timer to expire. 

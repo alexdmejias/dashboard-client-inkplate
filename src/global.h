@@ -14,8 +14,9 @@ struct Config
     int sleepTime;
     bool debug;
     float timezoneOffset; // Timezone offset in hours from UTC (e.g., -5 for EST, +5.5 for IST)
+    bool showSleepStatus; // Display sleep information before entering deep sleep
 };
 
 void log(String msg);
 void stopProgram(Inkplate &d);
-void handleSleep(int time);
+void handleSleep(Inkplate &d, int time, Config &config);

@@ -7,7 +7,8 @@ Config defaultConfig = {
     30,                      // wifiTimeout
     20,                      // sleepTime
     true,                    // debug
-    0.0                      // timezoneOffset (0 = UTC)
+    0.0,                     // timezoneOffset (0 = UTC)
+    false                    // showSleepStatus (disabled by default)
 };
 
 int MAX_CONFIG_SIZE = 1000;
@@ -62,6 +63,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
             config.wifiTimeout = doc["wifiTimeout"] | defaultConfig.wifiTimeout;
             config.debug = doc["debug"] | defaultConfig.debug;
             config.timezoneOffset = doc["timezoneOffset"] | defaultConfig.timezoneOffset;
+            config.showSleepStatus = doc["showSleepStatus"] | defaultConfig.showSleepStatus;
         }
 
         // TODO should dump all of the config data
@@ -97,6 +99,7 @@ void saveConfiguration(const char *filename, Config &config)
     log("sleepTime: " + String(config.sleepTime));
     log("debug: " + String(config.debug));
     log("timezoneOffset: " + String(config.timezoneOffset, 1));
+    log("showSleepStatus: " + String(config.showSleepStatus));
 
     doc["server"] = config.server;
     doc["ssid"] = config.ssid;
@@ -105,6 +108,7 @@ void saveConfiguration(const char *filename, Config &config)
     doc["sleepTime"] = config.sleepTime;
     doc["debug"] = config.debug;
     doc["timezoneOffset"] = config.timezoneOffset;
+    doc["showSleepStatus"] = config.showSleepStatus;
 
     // Serialize JSON to file
     if (serializeJsonPretty(doc, file) == 0)
@@ -121,7 +125,7 @@ void readSerialCommands(Config &config)
 {
     if (!hasDisplayedIntroMessage)
     {
-        log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezoneOffset, save, exit, print, reset, help");
+        log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezoneOffset, showSleepStatus, save, exit, print, reset, help");
         hasDisplayedIntroMessage = true;
     }
 
@@ -132,6 +136,11 @@ void readSerialCommands(Config &config)
         {
             config.debug = !config.debug;
             log("Debug mode: " + String(config.debug));
+        }
+        else if (command == "showSleepStatus")
+        {
+            config.showSleepStatus = !config.showSleepStatus;
+            log("Show sleep status: " + String(config.showSleepStatus));
         }
         else if (command == "ssid")
         {
@@ -205,6 +214,7 @@ void readSerialCommands(Config &config)
             log("sleepTime: " + String(config.sleepTime));
             log("debug: " + String(config.debug));
             log("timezoneOffset: " + String(config.timezoneOffset, 1));
+            log("showSleepStatus: " + String(config.showSleepStatus));
         }
         else if (command == "print")
         {
@@ -224,7 +234,7 @@ void readSerialCommands(Config &config)
         }
         else if (command == "help")
         {
-            log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezoneOffset, save, exit, print, reset, help");
+            log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezoneOffset, showSleepStatus, save, exit, print, reset, help");
         }
         else
         {

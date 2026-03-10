@@ -105,7 +105,7 @@ void setup()
       sleepDuration = 3000; // Third priority: default value
     }
 
-    handleSleep(sleepDuration);
+    handleSleep(display, sleepDuration, config);
   }
 }
 
