@@ -15,9 +15,14 @@ struct ScheduleEntry {
 
 // Parse sleep interval from header value
 // Supports simple formats like "20s", "5m", "2h", "1d"
+// Supports ISO 8601 duration format like "PT30S", "PT5M", "PT2H", "P1D", "P1DT2H30M"
 // Also supports schedule format: "00:00-06:00=480 06:00-18:00=15 18:00-24:00=30"
 // timezoneOffset: offset in hours from UTC (e.g., -5 for EST, +5.5 for IST) to interpret schedule times in local time
 int parseSleepInterval(String headerValue, float timezoneOffset = 0);
+
+// Parse ISO 8601 duration format (e.g., "PT30S", "PT5M", "PT2H", "P1D", "P1DT2H30M45S")
+// Returns duration in seconds, or 0 if parsing fails
+int parseISO8601Duration(String duration);
 
 // Parse individual schedule entry (format: HH:MM-HH:MM=MINUTES)
 bool parseScheduleEntry(String entry, ScheduleEntry &result);

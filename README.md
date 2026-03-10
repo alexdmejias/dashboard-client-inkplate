@@ -56,6 +56,31 @@ Use a number followed by a time unit:
 x-sleep-for: 5m
 ```
 
+#### ISO 8601 Duration Format
+Use standard ISO 8601 duration format (compatible with JavaScript Temporal API):
+
+**Format:** `P[n]DT[n]H[n]M[n]S`
+
+Where:
+- `P` - Period designator (required, must be first)
+- `[n]D` - Number of days
+- `T` - Time designator (separates date from time components)
+- `[n]H` - Number of hours (after T)
+- `[n]M` - Number of minutes (after T)
+- `[n]S` - Number of seconds (after T)
+
+**Examples:**
+```http
+x-sleep-for: PT30S          # 30 seconds
+x-sleep-for: PT5M           # 5 minutes
+x-sleep-for: PT2H           # 2 hours
+x-sleep-for: P1D            # 1 day
+x-sleep-for: PT1H30M        # 1 hour 30 minutes
+x-sleep-for: P1DT2H30M45S   # 1 day, 2 hours, 30 minutes, 45 seconds
+```
+
+**Note:** Components must be in order (D before T, H before M before S). All components are optional, but at least one must be present.
+
 #### Schedule Format
 Define different intervals for different times of day using a space-separated list of time ranges:
 

@@ -78,8 +78,103 @@ bool isTimeInRange(int currentHour, int currentMinute, const ScheduleEntry &entr
   return currentMinutes >= startMinutes && currentMinutes < endMinutes;
 }
 
+// Parse ISO 8601 duration format (e.g., "PT30S", "PT5M", "PT2H", "P1D", "P1DT2H30M45S")
+// Returns duration in seconds, or 0 if parsing fails
+// Format: P[n]DT[n]H[n]M[n]S where:
+//   P = Period designator (required, at start)
+//   [n]D = Number of days
+//   T = Time designator (separates date from time components)
+//   [n]H = Number of hours
+//   [n]M = Number of minutes (after T)
+//   [n]S = Number of seconds
+int parseISO8601Duration(String duration) {
+  duration.trim();
+  duration.toUpperCase(); // Normalize to uppercase
+  
+  if (duration.length() < 2 || duration.charAt(0) != 'P') {
+    return 0; // Must start with 'P'
+  }
+  
+  int totalSeconds = 0;
+  int i = 1; // Start after 'P'
+  bool inTimePart = false; // Track if we've seen 'T'
+  
+  while (i < duration.length()) {
+    // Check for time designator
+    if (duration.charAt(i) == 'T') {
+      inTimePart = true;
+      i++;
+      continue;
+    }
+    
+    // Parse number
+    int numStart = i;
+    while (i < duration.length() && isDigit(duration.charAt(i))) {
+      i++;
+    }
+    
+    if (i == numStart || i >= duration.length()) {
+      // No number found or reached end without designator
+      return 0;
+    }
+    
+    String numStr = duration.substring(numStart, i);
+    int value = numStr.toInt();
+    
+    if (value <= 0) {
+      return 0; // Invalid or zero value
+    }
+    
+    // Get designator character
+    char designator = duration.charAt(i);
+    i++;
+    
+    // Process based on designator
+    switch (designator) {
+      case 'D': // Days (only valid before T)
+        if (inTimePart) {
+          log("ISO8601: 'D' designator not allowed after 'T'");
+          return 0;
+        }
+        totalSeconds += value * 86400; // 24 * 60 * 60
+        break;
+        
+      case 'H': // Hours (only valid after T)
+        if (!inTimePart) {
+          log("ISO8601: 'H' designator requires 'T' prefix");
+          return 0;
+        }
+        totalSeconds += value * 3600; // 60 * 60
+        break;
+        
+      case 'M': // Minutes (only valid after T)
+        if (!inTimePart) {
+          log("ISO8601: 'M' designator requires 'T' prefix for minutes");
+          return 0;
+        }
+        totalSeconds += value * 60;
+        break;
+        
+      case 'S': // Seconds (only valid after T)
+        if (!inTimePart) {
+          log("ISO8601: 'S' designator requires 'T' prefix");
+          return 0;
+        }
+        totalSeconds += value;
+        break;
+        
+      default:
+        log("ISO8601: Unknown designator '" + String(designator) + "'");
+        return 0;
+    }
+  }
+  
+  return totalSeconds;
+}
+
 // Parse sleep interval from header value
 // Supports simple formats like "20s", "5m", "2h", "1d"
+// Supports ISO 8601 duration format like "PT30S", "PT5M", "PT2H", "P1D", "P1DT2H30M"
 // Also supports schedule format: "00:00-06:00=480 06:00-18:00=15 18:00-24:00=30"
 // timezoneOffset: offset in hours from UTC (e.g., -5 for EST, +5.5 for IST) to interpret schedule times in local time
 int parseSleepInterval(String headerValue, float timezoneOffset) {
@@ -163,6 +258,19 @@ int parseSleepInterval(String headerValue, float timezoneOffset) {
     
     log("No matching schedule entry found for current time");
     return 0;
+  }
+  
+  // Check if this is ISO 8601 duration format (starts with 'P')
+  if (headerValue.charAt(0) == 'P' || headerValue.charAt(0) == 'p') {
+    log("Detected ISO 8601 duration format");
+    int seconds = parseISO8601Duration(headerValue);
+    if (seconds > 0) {
+      log("Parsed ISO 8601 duration: " + String(seconds) + " seconds");
+      return seconds;
+    } else {
+      log("Failed to parse ISO 8601 duration");
+      return 0;
+    }
   }
   
   // Simple format parsing (e.g., "20s", "5m", "2h", "1d")
