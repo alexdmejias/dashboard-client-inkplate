@@ -18,6 +18,7 @@
 #include "draw.h"
 #include "config.h"
 #include "sleep.h"
+#include "http_errors.h"
 
 Inkplate display(INKPLATE_3BIT);
 
@@ -32,9 +33,10 @@ unsigned long lastTouchpadCheckTime = 0;
 const unsigned long touchpadCheckInterval = 100; // Check every 100 milliseconds
 #endif
 
-void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout);
+void connectToWifi(Inkplate &d, const char *ssid, const char *password, int wifiTimeout);
 void handleWakeup(Inkplate &d);
-void getImage(Inkplate &d, const char *server);
+void getImage(Inkplate &d, const char *server, int httpTimeout);
+bool waitForSerialDebugRequest(unsigned long windowMs);
 
 void setup()
 {
@@ -53,10 +55,21 @@ void setup()
 
   readConfig(display, filename, config);
 
+  int debugWindowSeconds = config.debugWindow;
+  if (debugWindowSeconds < 0)
+  {
+    debugWindowSeconds = 0;
+  }
+  const unsigned long serialDebugWindowMs = static_cast<unsigned long>(debugWindowSeconds) * 1000UL;
+  if (!inDebugMode && serialDebugWindowMs > 0 && waitForSerialDebugRequest(serialDebugWindowMs))
+  {
+    inDebugMode = true;
+  }
+
   if (inDebugMode)
   {
     display.clearDisplay();
-    drawErrorMessage(display, "debug mode, touch any pad to exit");
+    drawErrorMessage(display, "debug mode, touch any pad to exit", "Touch any pad to exit and refresh");
     display.display();
   }
   else
@@ -87,9 +100,9 @@ void setup()
       log("NTP time synchronization failed - schedule-based intervals will not work");
     }
 
-    getImage(display, config.server);
+    getImage(display, config.server, config.httpTimeout);
 
-    if (config.debug)
+    if (config.showDebug)
     {
       drawDebugInfo(display, config);
     }
@@ -158,26 +171,64 @@ void handleWakeup(Inkplate &d)
   }
 }
 
-void connectToWifi(Inkplate &d, const char *ssid, const char *password, int timeout)
+bool waitForSerialDebugRequest(unsigned long windowMs)
+{
+  if (windowMs == 0)
+  {
+    return false;
+  }
+  log("Waiting " + String(windowMs / 1000UL) + " seconds for Serial 'debug' command...");
+  unsigned long start = millis();
+  while (millis() - start < windowMs)
+  {
+    if (Serial.available())
+    {
+      String command = Serial.readStringUntil('\n');
+      command.trim();
+      if (command.equalsIgnoreCase("debug"))
+      {
+        log("Serial debug command received - entering debug mode");
+        return true;
+      }
+
+      log("Serial input ignored during debug window: " + command);
+      Serial.println("Send 'debug' to enter debug mode during the wake window.");
+    }
+
+    delay(10);
+  }
+
+  return false;
+}
+
+void connectToWifi(Inkplate &d, const char *ssid, const char *password, int wifiTimeout)
 {
   log("Connecting to WiFi...");
-  bool connectedToWifi = d.connectWiFi(ssid, password, timeout, true);
+  bool connectedToWifi = d.connectWiFi(ssid, password, wifiTimeout, true);
   if (!connectedToWifi)
   {
     log("Failed to connect to WiFi");
-    drawErrorMessage(d, String("Error: Failed to connect to WiFi. SSID: ") + ssid);
+    drawErrorMessage(d, String("Error: Failed to connect to WiFi. SSID: ") + ssid, "Check SSID and password in config.txt");
     stopProgram(d);
   }
 
   log("Connected to WiFi");
 }
 
-void getImage(Inkplate &d, const char *server)
+void getImage(Inkplate &d, const char *server, int httpTimeout)
 {
+  log("Fetching image from: " + String(server));
+  log("HTTP timeout: " + String(httpTimeout) + " seconds");
+
   HTTPClient http;
   // Set parameters to speed up the download process.
   http.getStream().setNoDelay(true);
-  http.getStream().setTimeout(1);
+
+  // setTimeout expects milliseconds; httpTimeout is in seconds
+  http.getStream().setTimeout(httpTimeout * 1000UL);
+  // Also set the HTTPClient-level timeout (milliseconds) for connection and response headers
+  http.setTimeout(httpTimeout * 1000);
+
   const char *headerKeys[] = {"x-sleep-for", "refresh-interval"};
   const size_t numberOfHeaders = 2;
 
@@ -186,54 +237,61 @@ void getImage(Inkplate &d, const char *server)
 
   // Check response code.
   int httpCode = http.GET();
+  log("HTTP response code: " + String(httpCode));
+
   if (httpCode == 200)
   {
-    // Get the response length and make sure it is not 0.
+    // Get the response length; -1 means Content-Length was not provided (e.g. chunked transfer)
     int32_t len = http.getSize();
-    if (len > 0)
+    log("Response size: " + (len >= 0 ? String(len) + " bytes" : String("unknown (chunked)")));
+
+    // Parse sleep interval from HTTP headers
+    String sleepHeader = "";
+    if (http.hasHeader("x-sleep-for")) {
+      sleepHeader = http.header("x-sleep-for");
+      log("Found x-sleep-for header: " + sleepHeader);
+    } else if (http.hasHeader("refresh-interval")) {
+      sleepHeader = http.header("refresh-interval");
+      log("Found refresh-interval header: " + sleepHeader);
+    }
+    
+    if (sleepHeader.length() > 0) {
+      int parsedInterval = parseSleepInterval(sleepHeader, config.timezoneOffset);
+      if (parsedInterval > 0) {
+        sleepFor = parsedInterval;
+        log("Setting sleep interval from header: " + String(sleepFor) + " seconds");
+      } else {
+        log("Failed to parse sleep interval from header, will use config value");
+      }
+    } else {
+      log("No sleep interval header found, will use config value");
+    }
+
+    if (len != 0)
     {
       if (!drawImageFromClient(d, http, len))
       {
-        // If is something failed (wrong filename or wrong bitmap format), write error message on the screen.
+        // If something failed (wrong filename or wrong bitmap format), write error message on the screen.
         // REMEMBER! You can only use Windows Bitmap file with color depth of 1, 4, 8 or 24 bits with no
         // compression!
         d.println("Image open error");
       }
-      
-      // Parse sleep interval from HTTP headers
-      String sleepHeader = "";
-      if (http.hasHeader("x-sleep-for")) {
-        sleepHeader = http.header("x-sleep-for");
-        log("Found x-sleep-for header: " + sleepHeader);
-      } else if (http.hasHeader("refresh-interval")) {
-        sleepHeader = http.header("refresh-interval");
-        log("Found refresh-interval header: " + sleepHeader);
-      }
-      
-      if (sleepHeader.length() > 0) {
-        int parsedInterval = parseSleepInterval(sleepHeader, config.timezoneOffset);
-        if (parsedInterval > 0) {
-          sleepFor = parsedInterval;
-          log("Setting sleep interval from header: " + String(sleepFor) + " seconds");
-        } else {
-          log("Failed to parse sleep interval from header, will use config value");
-        }
-      } else {
-        log("No sleep interval header found, will use config value");
-      }
     }
     else
     {
-      log("Invalid response length");
+      log("Invalid response length: 0 bytes");
+      drawErrorMessage(d, "Error: Empty response from server", "Check server is returning a valid image");
     }
   }
   else
   {
-    log("HTTP error:");
-    printf("HTTP error: %d\n", httpCode);
+    log("HTTP error code: " + String(httpCode));
     String payload = http.getString();
-    log("Error response: " + payload);
-    drawErrorMessage(d, "HTTP error: " + String(httpCode));
+    if (payload.length() > 0)
+    {
+      log("Error response body: " + payload);
+    }
+    handleHttpError(d, httpCode, payload);
   }
 }
 
@@ -272,4 +330,12 @@ void getImage(Inkplate &d, const char *server)
 //   log(String(d.rtcGetHour(), DEC));
 //   Serial.println(d.rtcGetHour());
 //   log("e");
+// }
+
+// https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+// void setTimezone(char *timezone)
+// {
+//   Serial.printf("  Setting Timezone to %s\n", timezone);
+//   setenv("TZ", timezone, 1); //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
+//   tzset();
 // }

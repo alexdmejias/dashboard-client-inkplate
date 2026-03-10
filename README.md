@@ -4,6 +4,7 @@ Dashboard project meant to work with the inkplate family of displays. It will pi
 ## Features
 - microSD configurable
 - deep sleep
+- external button wake-up
 - purposefully dumb
 - **Dynamic sleep intervals via HTTP headers** - Server can control refresh rates
 
@@ -26,14 +27,24 @@ Wifi SSID to connect to
 Plain text password for the wifi network
 ### sleepTime(int)
 Amount of seconds that the screen should sleep for between refreshes. **Note:** This can be overridden dynamically by HTTP response headers (see Dynamic Sleep Intervals below).
-### debug(bool)
-Whether to display configuration being used
+### debugWindow(int)
+Seconds to wait after wake for a Serial `debug` command before proceeding. Set to `0` to disable the window.
+### showDebug(bool)
+Whether to display the configuration overlay on screen
 ### wifiTimeout(int)
 Amount of seconds that should be waited before giving up connecting to WIFI
-### timezoneOffset(int)
+### httpTimeout(int)
+Timeout for HTTP requests in seconds (default: 15)
+### timezoneOffset(float)
 **Optional.** Timezone offset in hours from UTC (e.g., `-5` for EST, `+1` for CET, `+5.5` for IST). When specified, schedule-based sleep intervals will be interpreted in local time instead of UTC. Default is `0` (UTC).
 ### showSleepStatus(bool)
 **Optional.** When enabled, the display will show sleep information before entering deep sleep, including the current time, sleep duration, and expected wake-up time. Default is `false` (disabled).
+### wakeButtonPin(int)
+GPIO pin number for external button to wake device from deep sleep (default: 36). Connect a button between this pin and GND to wake the device.
+
+## Example Configuration
+
+An example `config.json` file is provided in `example-config.json`. Copy this to the root of your microSD card as `config.txt` and modify the values as needed.
 
 ## Dynamic Sleep Intervals
 
@@ -153,9 +164,19 @@ The display will show:
 
 This feature is useful for monitoring device status and understanding sleep schedules.
 
+## External Button Wake-up
+
+To use the external button wake-up feature:
+1. Configure the `wakeButtonPin` in your config file (default is GPIO 36)
+2. Connect a momentary push button between the configured GPIO pin and GND
+3. Press the button to wake the device from deep sleep
+4. Supported GPIO pins for external wake-up (EXT0): 0, 2, 4, 12-15, 25-27, 32-39
+
+**Note:** The wake-up is triggered when the button is pressed (pin goes LOW). Connect the button between the GPIO pin and GND. The ESP32 will automatically enable an internal pull-up resistor on the pin during deep sleep.
+
 ### Manual Wake-Up Mechanisms
 
-The device supports manual wake-up during sleep through the **integrated touchpad buttons**:
+The device supports manual wake-up during sleep through multiple mechanisms:
 
 #### Touchpad Wake-Up (Recommended)
 - **Inkplate10/10v2**: Built-in touchpads (PAD1, PAD2, PAD3) can wake the device
@@ -163,11 +184,16 @@ The device supports manual wake-up during sleep through the **integrated touchpa
 - **Usage**: Simply touch any of the three touchpad areas on the device
 - **Response**: Device will immediately wake and enter debug mode, allowing you to reconfigure or restart
 
+#### External Button Wake-Up (Optional)
+- Connect a button to the configured GPIO pin (default: GPIO 36)
+- Button press wakes device from deep sleep
+- Provides a physical wake-up method in addition to touchpad
+
 #### How It Works
 When the device enters deep sleep with touchpad wake-up enabled:
-1. Touch any of the three touchpads (PAD1, PAD2, PAD3)
-2. Device wakes up and detects touchpad wake source
+1. Touch any of the three touchpads (PAD1, PAD2, PAD3) or press external button
+2. Device wakes up and detects wake source
 3. Enters debug mode with configuration options
 4. Touch touchpad again or restart to resume normal operation
 
-This provides a convenient way to interrupt sleep cycles for maintenance, reconfiguration, or immediate updates without waiting for the timer to expire. 
+This provides a convenient way to interrupt sleep cycles for maintenance, reconfiguration, or immediate updates without waiting for the timer to expire.

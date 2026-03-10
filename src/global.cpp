@@ -1,5 +1,6 @@
 #include "global.h"
 #include "draw.h"
+#include "esp_sleep.h"
 #define uS_TO_S_FACTOR 1000000ULL /* Conversion factor for micro seconds to seconds */
 
 void log(String msg)
@@ -13,16 +14,35 @@ void stopProgram(Inkplate &d)
     d.sdCardSleep();
     // Use empty config (showSleepStatus=false) - don't show sleep status during error conditions
     Config tempConfig = {};
+    tempConfig.wakeButtonPin = 36; // Use default GPIO 36 for wake button
     handleSleep(d, 3001, tempConfig);
 }
 
 void handleSleep(Inkplate &d, int time, Config &config)
 {
+    // Enable timer wake-up
+    esp_sleep_enable_timer_wakeup(time * uS_TO_S_FACTOR); // Activate wake-up timer
+    
     // Enable touchpad wake-up for manual wake capability
     esp_sleep_enable_ext1_wakeup(TOUCHPAD_WAKE_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
     
-    // Enable timer wake-up
-    esp_sleep_enable_timer_wakeup(time * uS_TO_S_FACTOR); // Activate wake-up timer
+    // Enable external button wake-up on the specified GPIO pin
+    // The button should connect the pin to GND, so we wake on LOW (0)
+    if (config.wakeButtonPin >= 0) {
+        // Validate that the pin supports EXT0 wake-up
+        // Valid pins for EXT0: 0, 2, 4, 12-15, 25-27, 32-39
+        bool validPin = (config.wakeButtonPin == 0 || config.wakeButtonPin == 2 || config.wakeButtonPin == 4 ||
+                        (config.wakeButtonPin >= 12 && config.wakeButtonPin <= 15) ||
+                        (config.wakeButtonPin >= 25 && config.wakeButtonPin <= 27) ||
+                        (config.wakeButtonPin >= 32 && config.wakeButtonPin <= 39));
+        
+        if (validPin) {
+            esp_sleep_enable_ext0_wakeup((gpio_num_t)config.wakeButtonPin, 0);
+            log("External button wake-up enabled on GPIO " + String(config.wakeButtonPin));
+        } else {
+            log("Warning: GPIO " + String(config.wakeButtonPin) + " does not support EXT0 wake-up. Valid pins: 0, 2, 4, 12-15, 25-27, 32-39");
+        }
+    }
     
     // Display sleep status if enabled
     if (config.showSleepStatus && time > 0) {
@@ -77,7 +97,10 @@ void handleSleep(Inkplate &d, int time, Config &config)
                              "for " + durationStr + "\n" +
                              "Wake: " + String(wakeTimeStr);
         
-        drawErrorMessage(d, sleepMessage);
+        // Use wake-up hint based on what's configured
+        String wakeHint = "Touch pad or button to wake";
+        
+        drawErrorMessage(d, sleepMessage, wakeHint);
         d.display();
     }
     

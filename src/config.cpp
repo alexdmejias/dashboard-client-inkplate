@@ -1,14 +1,17 @@
 #include "config.h"
 
 Config defaultConfig = {
-    "example.com",           // server
-    "fake_password",         // password
-    "my_home_network-5g",    // ssid
-    30,                      // wifiTimeout
-    20,                      // sleepTime
-    true,                    // debug
-    0.0,                     // timezoneOffset (0 = UTC)
-    false                    // showSleepStatus (disabled by default)
+    "example.com",            // server
+    "fake_password",          // password
+    "my_home_network-5g",     // ssid
+    30,                       // wifiTimeout
+    20,                       // sleepTime
+    15,                       // httpTimeout (seconds)
+    true,                     // showDebug
+    0.0,                      // timezoneOffset (0 = UTC)
+    false,                    // showSleepStatus (disabled by default)
+    36,                       // wakeButtonPin (GPIO 36)
+    10                        // debugWindow (seconds)
 };
 
 int MAX_CONFIG_SIZE = 1000;
@@ -29,7 +32,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
         if (!file.open(filename, O_RDONLY))
         { // If it fails to open, send error message to display, otherwise read the file.
             log("File open error");
-            drawErrorMessage(d, "Error: Could not open file");
+            drawErrorMessage(d, "Error: Could not open file", "Ensure file exists on SD card root");
             stopProgram(d);
         }
         else
@@ -53,7 +56,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
             if (!doc["server"].is<const char *>() || !doc["ssid"].is<const char *>() || !doc["password"].is<const char *>())
             {
                 log("Missing required config values or incorrect type");
-                drawErrorMessage(d, "Error: Missing required config values or incorrect type");
+                drawErrorMessage(d, "Error: Missing required config values or incorrect type", "Verify server, ssid, password fields");
                 stopProgram(d);
             }
             strlcpy(config.server, doc["server"], sizeof(config.server));
@@ -61,9 +64,26 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
             strlcpy(config.password, doc["password"], sizeof(config.password));
             config.sleepTime = doc["sleepTime"] | defaultConfig.sleepTime;
             config.wifiTimeout = doc["wifiTimeout"] | defaultConfig.wifiTimeout;
-            config.debug = doc["debug"] | defaultConfig.debug;
+            config.httpTimeout = doc["httpTimeout"] | defaultConfig.httpTimeout;
+
+            if (doc.containsKey("showDebug"))
+            {
+                config.showDebug = doc["showDebug"] | defaultConfig.showDebug;
+            }
+            else if (doc.containsKey("debug"))
+            {
+                // Backwards compatibility with older config files
+                config.showDebug = doc["debug"] | defaultConfig.showDebug;
+            }
+            else
+            {
+                config.showDebug = defaultConfig.showDebug;
+            }
+
             config.timezoneOffset = doc["timezoneOffset"] | defaultConfig.timezoneOffset;
             config.showSleepStatus = doc["showSleepStatus"] | defaultConfig.showSleepStatus;
+            config.wakeButtonPin = doc["wakeButtonPin"] | defaultConfig.wakeButtonPin;
+            config.debugWindow = doc["debugWindow"] | defaultConfig.debugWindow;
         }
 
         // TODO should dump all of the config data
@@ -73,7 +93,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
     else
     {
         log("SD Card error!");
-        drawErrorMessage(d, "Error: SD Card error");
+        drawErrorMessage(d, "Error: SD Card error", "Check SD card is inserted properly");
         stopProgram(d);
     }
 }
@@ -97,18 +117,24 @@ void saveConfiguration(const char *filename, Config &config)
     log("password: " + String(config.password));
     log("wifiTimeout: " + String(config.wifiTimeout));
     log("sleepTime: " + String(config.sleepTime));
-    log("debug: " + String(config.debug));
+    log("showDebug: " + String(config.showDebug));
+    log("httpTimeout: " + String(config.httpTimeout));
     log("timezoneOffset: " + String(config.timezoneOffset, 1));
     log("showSleepStatus: " + String(config.showSleepStatus));
+    log("wakeButtonPin: " + String(config.wakeButtonPin));
+    log("debugWindow: " + String(config.debugWindow));
 
     doc["server"] = config.server;
     doc["ssid"] = config.ssid;
     doc["password"] = config.password;
     doc["wifiTimeout"] = config.wifiTimeout;
     doc["sleepTime"] = config.sleepTime;
-    doc["debug"] = config.debug;
+    doc["httpTimeout"] = config.httpTimeout;
+    doc["showDebug"] = config.showDebug;
     doc["timezoneOffset"] = config.timezoneOffset;
     doc["showSleepStatus"] = config.showSleepStatus;
+    doc["wakeButtonPin"] = config.wakeButtonPin;
+    doc["debugWindow"] = config.debugWindow;
 
     // Serialize JSON to file
     if (serializeJsonPretty(doc, file) == 0)
@@ -121,21 +147,42 @@ void saveConfiguration(const char *filename, Config &config)
 }
 
 bool hasDisplayedIntroMessage = false;
+void printSerialHelp()
+{
+    log("Serial commands:");
+    log("  showDebug       - Toggle debug overlay on/off");
+    log("  ssid            - Set WiFi SSID");
+    log("  password        - Set WiFi password");
+    log("  server          - Set server address");
+    log("  wifiTimeout     - Set WiFi connection timeout (seconds)");
+    log("  httpTimeout     - Set HTTP request timeout (seconds)");
+    log("  sleepTime       - Set sleep time (seconds)");
+    log("  timezoneOffset  - Set timezone offset (hours from UTC)");
+    log("  showSleepStatus - Toggle sleep status display on/off");
+    log("  debugWindow     - Set debug window duration (seconds)");
+    log("  save            - Save current configuration to SD card");
+    log("  current         - Show current configuration");
+    log("  print           - Print contents of config file");
+    log("  reset           - Reset configuration to default");
+    log("  restart         - Restart the device");
+    log("  help            - Show this help message");
+}
+
 void readSerialCommands(Config &config)
 {
     if (!hasDisplayedIntroMessage)
     {
-        log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezoneOffset, showSleepStatus, save, exit, print, reset, help");
+        printSerialHelp();
         hasDisplayedIntroMessage = true;
     }
 
     if (Serial.available())
     {
         String command = Serial.readStringUntil('\n');
-        if (command == "debug")
+        if (command == "showDebug")
         {
-            config.debug = !config.debug;
-            log("Debug mode: " + String(config.debug));
+            config.showDebug = !config.showDebug;
+            log("Show debug overlay: " + String(config.showDebug));
         }
         else if (command == "showSleepStatus")
         {
@@ -179,6 +226,16 @@ void readSerialCommands(Config &config)
                 log("Wifi timeout set to: " + String(wifiTimeout));
             }
         }
+        else if (command == "httpTimeout")
+        {
+            String httpTimeoutStr = readUserInput("Enter new httpTimeout:", 10000);
+            if (!httpTimeoutStr.isEmpty())
+            {
+                int httpTimeout = httpTimeoutStr.toInt();
+                config.httpTimeout = httpTimeout;
+                log("Http timeout set to: " + String(httpTimeout));
+            }
+        }
         else if (command == "sleepTime")
         {
             String sleepTimeStr = readUserInput("Enter new sleepTime:", 10000);
@@ -199,6 +256,16 @@ void readSerialCommands(Config &config)
                 log("timezoneOffset set to: " + String(timezoneOffset, 1));
             }
         }
+        else if (command == "debugWindow")
+        {
+            String debugWindowStr = readUserInput("Enter new debugWindow (seconds):", 10000);
+            if (!debugWindowStr.isEmpty())
+            {
+                int debugWindow = debugWindowStr.toInt();
+                config.debugWindow = debugWindow;
+                log("debugWindow set to: " + String(debugWindow));
+            }
+        }
         else if (command == "save")
         {
             saveConfiguration("/config.txt", config);
@@ -211,10 +278,13 @@ void readSerialCommands(Config &config)
             log("ssid: " + String(config.ssid));
             log("password: " + String(config.password));
             log("wifiTimeout: " + String(config.wifiTimeout));
+            log("httpTimeout: " + String(config.httpTimeout));
             log("sleepTime: " + String(config.sleepTime));
-            log("debug: " + String(config.debug));
+            log("showDebug: " + String(config.showDebug));
             log("timezoneOffset: " + String(config.timezoneOffset, 1));
             log("showSleepStatus: " + String(config.showSleepStatus));
+            log("wakeButtonPin: " + String(config.wakeButtonPin));
+            log("debugWindow: " + String(config.debugWindow));
         }
         else if (command == "print")
         {
@@ -234,7 +304,7 @@ void readSerialCommands(Config &config)
         }
         else if (command == "help")
         {
-            log("Serial commands available are debug, ssid, password, server, wifiTimeout, sleepTime, timezoneOffset, showSleepStatus, save, exit, print, reset, help");
+            printSerialHelp();
         }
         else
         {
