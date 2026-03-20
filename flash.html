@@ -59,6 +59,10 @@
         
         <p>Flash the Inkplate Dashboard Client firmware to your Inkplate device using ESP Web Tools.</p>
         
+        <div id="firmware-info" style="background: #e8f5e9; padding: 10px; border-radius: 4px; margin: 15px 0; font-size: 0.9em;">
+            <strong>📦 Firmware Info:</strong> <span id="build-info">Loading...</span>
+        </div>
+        
         <div class="info">
             <strong>ℹ️ Requirements:</strong>
             <ul>
@@ -125,8 +129,29 @@
         <h2>Resources</h2>
         <ul>
             <li><a href="https://github.com/alexdmejias/dashboard-client-inkplate">GitHub Repository</a></li>
+            <li><a href="https://github.com/alexdmejias/dashboard-client-inkplate/blob/main/docs/ESP_WEB_TOOLS_GUIDE.md">Flashing Guide</a></li>
+            <li><a href="https://github.com/alexdmejias/dashboard-client-inkplate/blob/main/docs/OTA_GUIDE.md">OTA Updates Guide</a></li>
             <li><a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools Documentation</a></li>
         </ul>
     </div>
+    
+    <script>
+        // Load firmware info if available
+        fetch('./firmware-info.json')
+            .then(response => response.json())
+            .then(data => {
+                const buildDate = new Date(data.build_date).toLocaleString();
+                const sizeKB = (data.firmware_size / 1024).toFixed(2);
+                const shortCommit = data.git_commit ? data.git_commit.substring(0, 7) : 'unknown';
+                
+                document.getElementById('build-info').innerHTML = 
+                    `Version ${data.version} | Built: ${buildDate} | Size: ${sizeKB} KB | Commit: <code>${shortCommit}</code>`;
+            })
+            .catch(error => {
+                // If firmware-info.json doesn't exist (local development), show generic message
+                document.getElementById('build-info').textContent = 'Local development version';
+            });
+    </script>
 </body>
 </html>
+

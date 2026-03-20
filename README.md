@@ -14,19 +14,29 @@ Dashboard project meant to work with the inkplate family of displays. It will pi
 ### Option 1: ESP Web Tools (Easiest)
 Flash firmware directly from your web browser (Chrome, Edge, or Opera):
 
+**Hosted Flasher (Recommended):**
+Visit [https://alexdmejias.github.io/dashboard-client-inkplate/](https://alexdmejias.github.io/dashboard-client-inkplate/) to flash your device with the latest firmware.
+
+**Local Flasher:**
 1. Open `flash.html` in a compatible browser
 2. Click "Connect and Install"
 3. Select your Inkplate device from the serial port list
 4. Wait for the flashing process to complete
 
-Alternatively, visit the hosted flasher page (if available).
+📖 **[ESP Web Tools Guide](docs/ESP_WEB_TOOLS_GUIDE.md)**
 
 ### Option 2: PlatformIO (Serial)
 Traditional serial flashing via USB:
 
 ```bash
+# Install PlatformIO
+pip install platformio
+
+# Flash via USB
 platformio run --target upload
 ```
+
+📖 **[Building Firmware Guide](docs/BUILDING_FIRMWARE.md)**
 
 ### Option 3: OTA Updates (Wireless)
 After initial setup, you can update firmware wirelessly:
@@ -50,6 +60,15 @@ After initial setup, you can update firmware wirelessly:
 - The device is in debug mode (send `debug` via serial during the debug window)
 - You trigger the update during the OTA timeout window after wake
 - You use the external wake button to wake the device when updates are needed
+
+📖 **[OTA Updates Guide](docs/OTA_GUIDE.md)**
+
+## Documentation
+
+- 📘 [Building Firmware Guide](docs/BUILDING_FIRMWARE.md) - How to build firmware.bin locally or via CI/CD
+- 📗 [GitHub Pages Setup](docs/GITHUB_PAGES_SETUP.md) - Host the web flasher on GitHub Pages
+- 📕 [OTA Updates Guide](docs/OTA_GUIDE.md) - Wireless firmware updates with deep sleep
+- 📙 [ESP Web Tools Guide](docs/ESP_WEB_TOOLS_GUIDE.md) - Web-based flashing instructions
 
 ## Roadmap
 - show help screen?

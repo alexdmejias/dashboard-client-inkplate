@@ -23,7 +23,36 @@ ESP Web Tools requires a browser that supports the WebSerial API:
 
 ## Flashing Steps
 
-### Option 1: Using the Included HTML File
+### Option 1: Using the Hosted Flasher (Easiest)
+
+The easiest way to flash your device is using our GitHub Pages hosted flasher:
+
+1. **Visit the flasher page**
+   - Go to [https://alexdmejias.github.io/dashboard-client-inkplate/](https://alexdmejias.github.io/dashboard-client-inkplate/)
+   - This page is automatically updated with the latest firmware on every commit to main
+
+2. **Connect your device**
+   - Connect your Inkplate device to your computer via USB
+   - Ensure the device is powered on
+
+3. **Start the flashing process**
+   - Click the "Connect and Install" button
+   - A dialog will appear showing available serial ports
+   - Select your Inkplate device from the list (usually shows as "USB Serial" or similar)
+   - Click "Connect"
+
+4. **Install the firmware**
+   - Click "Install" in the ESP Web Tools interface
+   - The tool will erase the device and flash the new firmware
+   - Wait for the process to complete (usually takes 1-2 minutes)
+
+5. **Complete!**
+   - Once finished, the device will automatically reboot
+   - You can disconnect from the web interface
+
+### Option 2: Using the Local HTML File
+
+If you prefer to use a local copy or want to test custom firmware:
 
 1. **Open the flasher page**
    - Locate `flash.html` in the root of this repository
@@ -49,12 +78,24 @@ ESP Web Tools requires a browser that supports the WebSerial API:
    - Once finished, the device will automatically reboot
    - You can disconnect from the web interface
 
-### Option 2: Using a Hosted Flasher (If Available)
+### Option 2: Using the Local HTML File
 
-If you've hosted the flasher page on a web server:
+If you prefer to use a local copy or want to test custom firmware:
 
-1. Navigate to the hosted URL in your browser
-2. Follow steps 2-5 from Option 1 above
+1. **Open the flasher page**
+   - Locate `flash.html` in the root of this repository
+   - Open it in Chrome, Edge, or Opera browser
+   - You can open it directly from your file system (no web server needed)
+
+2. **Prepare custom firmware (optional)**
+   - If using custom firmware, build it first:
+     ```bash
+     platformio run
+     cp .pio/build/esp32/firmware.bin ./firmware.bin
+     ```
+   - The local `flash.html` will use the `firmware.bin` in the same directory
+
+3. **Connect your device**
 
 ## Post-Flashing Setup
 
