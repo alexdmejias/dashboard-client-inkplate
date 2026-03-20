@@ -1,5 +1,6 @@
 #include "global.h"
 #include "esp_sleep.h"
+#include "WiFi.h"
 #define uS_TO_S_FACTOR 1000000ULL /* Conversion factor for micro seconds to seconds */
 
 void log(String msg)
@@ -7,9 +8,20 @@ void log(String msg)
     Serial.println("::::::::::: " + String(msg));
 }
 
+void shutdownWiFi()
+{
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    log("WiFi disabled for power saving");
+}
+
 void stopProgram(Inkplate &d)
 {
     d.display();
+    
+    // Ensure WiFi is disabled before sleep to save power
+    shutdownWiFi();
+    
     d.sdCardSleep();
     handleSleep(3001, 36); // Use default GPIO 36 for wake button
 }

@@ -5,7 +5,21 @@ Dashboard project meant to work with the inkplate family of displays. It will pi
 - microSD configurable
 - deep sleep
 - external button wake-up
+- optimized power consumption (Bluetooth disabled, WiFi shutdown, reduced CPU frequency)
 - purposefully dumb
+
+## Battery Saving
+
+This firmware is optimized for battery-powered operation with several power-saving features:
+
+- **Deep Sleep Mode**: Ultra-low power consumption between refreshes (10-100 µA)
+- **Explicit WiFi Shutdown**: WiFi radio disabled after use to prevent residual power drain
+- **Bluetooth Disabled**: Bluetooth stack disabled at startup (not used)
+- **Reduced CPU Frequency**: CPU runs at 80 MHz instead of 240 MHz during operation
+- **SD Card Sleep**: SD card powered down during deep sleep
+- **Configurable Timeouts**: WiFi and HTTP connection timeouts prevent prolonged operations
+
+For detailed information about battery life optimization, power consumption estimates, and best practices, see [docs/BATTERY_SAVING.md](docs/BATTERY_SAVING.md).
 
 ## Roadmap
 - show help screen?
