@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 #include "HTTPClient.h" //Include library for HTTPClient
 #include "WiFi.h"       //Include library for WiFi
+#include "esp_bt.h"     //Include library for Bluetooth control
 #include "fonts/FreeSans9pt7b.h"
 #include "fonts/FreeSans12pt7b.h"
 #include "fonts/FreeSans24pt7b.h"
@@ -44,6 +45,15 @@ void setup()
   display.begin(); // Init Inkplate library (you should call this function ONLY ONCE)
 
   Serial.begin(115200);
+
+  // Disable Bluetooth to save power (not used in this application)
+  btStop();
+  log("Bluetooth disabled for power saving");
+
+  // Reduce CPU frequency to save power during operation
+  // 80 MHz is sufficient for network I/O operations
+  setCpuFrequencyMhz(80);
+  log("CPU frequency reduced to 80 MHz for power saving");
 
 #if defined(ARDUINO_INKPLATE10)
   display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
@@ -265,6 +275,12 @@ void getImage(Inkplate &d, const char *server, int httpTimeout)
     }
     handleHttpError(d, httpCode, payload);
   }
+
+  // Explicitly disconnect and disable WiFi to save power in deep sleep
+  http.end();
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  log("WiFi disabled for power saving");
 }
 
 // void setTime(Inkplate &d)
