@@ -91,7 +91,7 @@ The following battery-saving features were already in the codebase:
 
 ### Before Optimizations
 - Active current: ~200-250 mA
-- Sleep current: ~100-200 µA (if WiFi not properly disabled: could be 70-100 mA!)
+- Sleep current: ~10-150 µA (could be 70-100 mA if WiFi not properly disabled)
 - With 5-minute refresh: ~9-10 days on 3000 mAh battery
 
 ### After Optimizations

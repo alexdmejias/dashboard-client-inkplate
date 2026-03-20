@@ -278,9 +278,7 @@ void getImage(Inkplate &d, const char *server, int httpTimeout)
 
   // Explicitly disconnect and disable WiFi to save power in deep sleep
   http.end();
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
-  log("WiFi disabled for power saving");
+  shutdownWiFi();
 }
 
 // void setTime(Inkplate &d)

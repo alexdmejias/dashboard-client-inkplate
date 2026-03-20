@@ -8,14 +8,19 @@ void log(String msg)
     Serial.println("::::::::::: " + String(msg));
 }
 
+void shutdownWiFi()
+{
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    log("WiFi disabled for power saving");
+}
+
 void stopProgram(Inkplate &d)
 {
     d.display();
     
     // Ensure WiFi is disabled before sleep to save power
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
-    log("WiFi disabled before sleep");
+    shutdownWiFi();
     
     d.sdCardSleep();
     handleSleep(3001, 36); // Use default GPIO 36 for wake button

@@ -106,12 +106,12 @@ The following improvements have been identified and implemented:
 
 ### Active Period (fetching and displaying image)
 - Duration: 5-30 seconds (depending on network speed and image size)
-- Current: ~150-250 mA (with optimizations)
+- Current: ~150-200 mA (with optimizations)
 - Components active: ESP32 CPU, WiFi, Display, SD card
 
 ### Deep Sleep Period
 - Duration: 20 seconds to hours (configurable)
-- Current: ~10-150 µA (microamps)
+- Current: ~10-100 µA (microamps)
 - Only RTC and wake-up circuits active
 
 ### Battery Life Calculation Example
@@ -120,17 +120,17 @@ The following improvements have been identified and implemented:
 
 **Active:** 
 - 20 seconds every 5 minutes = 20s / 300s = 6.67% duty cycle
-- Active current: 200 mA
-- Average active: 200 mA × 0.0667 = 13.3 mA
+- Active current: 175 mA (average of 150-200 mA range)
+- Average active: 175 mA × 0.0667 = 11.7 mA
 
 **Sleep:**
 - 280 seconds every 5 minutes = 93.33% duty cycle
-- Sleep current: 100 µA = 0.1 mA
-- Average sleep: 0.1 mA × 0.9333 = 0.093 mA
+- Sleep current: 55 µA = 0.055 mA (average of 10-100 µA range)
+- Average sleep: 0.055 mA × 0.9333 = 0.051 mA
 
-**Total Average:** 13.3 + 0.093 = 13.4 mA
+**Total Average:** 11.7 + 0.051 = 11.75 mA
 
-**Battery Life:** 3000 mAh / 13.4 mA = **224 hours = 9.3 days**
+**Battery Life:** 3000 mAh / 11.75 mA = **255 hours = 10.6 days**
 
 ## Best Practices for Maximum Battery Life
 

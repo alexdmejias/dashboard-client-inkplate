@@ -20,5 +20,6 @@ struct Config
 };
 
 void log(String msg);
+void shutdownWiFi();
 void stopProgram(Inkplate &d);
 void handleSleep(int time, int wakeButtonPin);
