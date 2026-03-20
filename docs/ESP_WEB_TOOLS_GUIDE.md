@@ -59,34 +59,6 @@ If you prefer to use a local copy or want to test custom firmware:
    - Open it in Chrome, Edge, or Opera browser
    - You can open it directly from your file system (no web server needed)
 
-2. **Connect your device**
-   - Connect your Inkplate device to your computer via USB
-   - Ensure the device is powered on
-
-3. **Start the flashing process**
-   - Click the "Connect and Install" button
-   - A dialog will appear showing available serial ports
-   - Select your Inkplate device from the list (usually shows as "USB Serial" or similar)
-   - Click "Connect"
-
-4. **Install the firmware**
-   - Click "Install" in the ESP Web Tools interface
-   - The tool will erase the device and flash the new firmware
-   - Wait for the process to complete (usually takes 1-2 minutes)
-
-5. **Complete!**
-   - Once finished, the device will automatically reboot
-   - You can disconnect from the web interface
-
-### Option 2: Using the Local HTML File
-
-If you prefer to use a local copy or want to test custom firmware:
-
-1. **Open the flasher page**
-   - Locate `flash.html` in the root of this repository
-   - Open it in Chrome, Edge, or Opera browser
-   - You can open it directly from your file system (no web server needed)
-
 2. **Prepare custom firmware (optional)**
    - If using custom firmware, build it first:
      ```bash
@@ -95,7 +67,11 @@ If you prefer to use a local copy or want to test custom firmware:
      ```
    - The local `flash.html` will use the `firmware.bin` in the same directory
 
-3. **Connect your device**
+3. **Connect and flash**
+   - Connect your Inkplate device via USB
+   - Click "Connect and Install"
+   - Select your device and follow the prompts
+   - Wait for flashing to complete
 
 ## Post-Flashing Setup
 
