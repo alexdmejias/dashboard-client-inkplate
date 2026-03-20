@@ -1,6 +1,12 @@
 # What is this
 Dashboard project meant to work with the inkplate family of displays. It will ping a server every _n_ seconds and will display the output along with some configuration information at the bottom. Meant to work with something like [dashboard-server](https://github.com/alexdmejias/dashboard-server), but this is meant to be server agnostic, as long as the response is an image, it _should_ work.
 
+## 🚀 Quick Start
+
+**New to this project?** Check out the [Quick Start Guide](QUICKSTART.md) to get up and running in minutes!
+
+**Or flash right now:** Visit the [Web Flasher](https://alexdmejias.github.io/dashboard-client-inkplate/) to flash your device from your browser.
+
 ## Features
 - microSD configurable
 - deep sleep
