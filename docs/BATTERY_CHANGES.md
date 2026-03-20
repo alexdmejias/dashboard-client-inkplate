@@ -112,7 +112,7 @@ The following battery-saving features were already in the codebase:
 ### After Optimizations
 - Active current: ~150-200 mA (saved 30-50 mA from CPU reduction)
 - Sleep current: ~10-100 µA (reliable shutdown)
-- With 5-minute refresh: ~12-14 days on 3000 mAh battery
+- With 5-minute refresh: ~10-11 days on 3000 mAh battery
 
 ### With Longer Refresh Intervals
 - 1-hour refresh: **1-2 months** battery life

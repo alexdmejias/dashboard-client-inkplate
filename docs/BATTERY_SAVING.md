@@ -127,6 +127,7 @@ The following improvements have been identified and implemented:
 - 280 seconds every 5 minutes = 93.33% duty cycle
 - Sleep current: 55 µA = 0.055 mA (average of 10-100 µA range)
 - Average sleep: 0.055 mA × 0.9333 = 0.051 mA
+- **Note:** Actual sleep current varies with hardware revision and temperature; use conservative estimates for critical applications
 
 **Total Average:** 11.7 + 0.051 = 11.75 mA
 

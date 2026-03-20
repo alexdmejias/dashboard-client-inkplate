@@ -47,6 +47,7 @@ void setup()
   Serial.begin(115200);
 
   // Disable Bluetooth to save power (not used in this application)
+  // Note: btStop() is a best-effort call; if it fails, monitor power consumption
   btStop();
   log("Bluetooth disabled for power saving");
 
@@ -276,7 +277,7 @@ void getImage(Inkplate &d, const char *server, int httpTimeout)
     handleHttpError(d, httpCode, payload);
   }
 
-  // Explicitly disconnect and disable WiFi to save power in deep sleep
+  // Close HTTP connection and disable WiFi to save power in deep sleep
   http.end();
   shutdownWiFi();
 }
