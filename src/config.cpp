@@ -10,7 +10,11 @@ Config defaultConfig = {
     true,                     // showDebug
     "EST5EDT,M3.2.0,M11.1.0", // timezone
     36,                       // wakeButtonPin (GPIO 36)
-    10                        // debugWindow (seconds)
+    10,                       // debugWindow (seconds)
+    false,                    // otaEnabled
+    3232,                     // otaPort
+    "",                       // otaPassword
+    30                        // otaTimeout (seconds)
 };
 
 int MAX_CONFIG_SIZE = 1000;
@@ -82,6 +86,10 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
 
             config.wakeButtonPin = doc["wakeButtonPin"] | defaultConfig.wakeButtonPin;
             config.debugWindow = doc["debugWindow"] | defaultConfig.debugWindow;
+            config.otaEnabled = doc["otaEnabled"] | defaultConfig.otaEnabled;
+            config.otaPort = doc["otaPort"] | defaultConfig.otaPort;
+            config.otaTimeout = doc["otaTimeout"] | defaultConfig.otaTimeout;
+            strlcpy(config.otaPassword, doc["otaPassword"] | defaultConfig.otaPassword, sizeof(config.otaPassword));
         }
 
         // TODO should dump all of the config data
@@ -119,6 +127,9 @@ void saveConfiguration(const char *filename, Config &config)
     log("httpTimeout: " + String(config.httpTimeout));
     log("wakeButtonPin: " + String(config.wakeButtonPin));
     log("debugWindow: " + String(config.debugWindow));
+    log("otaEnabled: " + String(config.otaEnabled));
+    log("otaPort: " + String(config.otaPort));
+    log("otaTimeout: " + String(config.otaTimeout));
 
     doc["server"] = config.server;
     doc["ssid"] = config.ssid;
@@ -129,6 +140,10 @@ void saveConfiguration(const char *filename, Config &config)
     doc["showDebug"] = config.showDebug;
     doc["wakeButtonPin"] = config.wakeButtonPin;
     doc["debugWindow"] = config.debugWindow;
+    doc["otaEnabled"] = config.otaEnabled;
+    doc["otaPort"] = config.otaPort;
+    doc["otaPassword"] = config.otaPassword;
+    doc["otaTimeout"] = config.otaTimeout;
 
     // Serialize JSON to file
     if (serializeJsonPretty(doc, file) == 0)
@@ -152,6 +167,10 @@ void printSerialHelp()
     log("  httpTimeout - Set HTTP request timeout (seconds)");
     log("  sleepTime   - Set sleep time (seconds)");
     log("  debugWindow - Set debug window duration (seconds)");
+    log("  otaEnabled  - Toggle OTA updates on/off");
+    log("  otaPort     - Set OTA port (default: 3232)");
+    log("  otaPassword - Set OTA password");
+    log("  otaTimeout  - Set OTA timeout (seconds)");
     log("  save        - Save current configuration to SD card");
     log("  current     - Show current configuration");
     log("  print       - Print contents of config file");
@@ -243,6 +262,37 @@ void readSerialCommands(Config &config)
                 log("debugWindow set to: " + String(debugWindow));
             }
         }
+        else if (command == "otaEnabled")
+        {
+            config.otaEnabled = !config.otaEnabled;
+            log("OTA enabled: " + String(config.otaEnabled));
+        }
+        else if (command == "otaPort")
+        {
+            String otaPortStr = readUserInput("Enter new OTA port:", 10000);
+            if (!otaPortStr.isEmpty())
+            {
+                int otaPort = otaPortStr.toInt();
+                config.otaPort = otaPort;
+                log("OTA port set to: " + String(otaPort));
+            }
+        }
+        else if (command == "otaPassword")
+        {
+            String otaPassword = readUserInput("Enter new OTA password:", 10000);
+            strlcpy(config.otaPassword, otaPassword.c_str(), sizeof(config.otaPassword));
+            log("OTA password set");
+        }
+        else if (command == "otaTimeout")
+        {
+            String otaTimeoutStr = readUserInput("Enter new OTA timeout (seconds):", 10000);
+            if (!otaTimeoutStr.isEmpty())
+            {
+                int otaTimeout = otaTimeoutStr.toInt();
+                config.otaTimeout = otaTimeout;
+                log("OTA timeout set to: " + String(otaTimeout));
+            }
+        }
         else if (command == "save")
         {
             saveConfiguration("/config.txt", config);
@@ -261,6 +311,9 @@ void readSerialCommands(Config &config)
             log("wakeButtonPin: " + String(config.wakeButtonPin));
             log("debugWindow: " + String(config.debugWindow));
             log("timezone: " + String(config.timezone));
+            log("otaEnabled: " + String(config.otaEnabled));
+            log("otaPort: " + String(config.otaPort));
+            log("otaTimeout: " + String(config.otaTimeout));
         }
         else if (command == "print")
         {

@@ -7,5 +7,9 @@
   "httpTimeout": 15,
   "showDebug": false,
   "wakeButtonPin": 36,
-  "debugWindow": 10
+  "debugWindow": 10,
+  "otaEnabled": false,
+  "otaPort": 3232,
+  "otaPassword": "",
+  "otaTimeout": 30
 }

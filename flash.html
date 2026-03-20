@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Inkplate Dashboard Client - ESP Web Tools Flasher</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            background: #f5f5f5;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #2196F3;
+        }
+        .warning {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #ff9800;
+        }
+        esp-web-install-button {
+            margin: 20px 0;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        ul {
+            margin-left: 20px;
+        }
+        li {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Inkplate Dashboard Client Flasher</h1>
+        
+        <p>Flash the Inkplate Dashboard Client firmware to your Inkplate device using ESP Web Tools.</p>
+        
+        <div id="firmware-info" style="background: #e8f5e9; padding: 10px; border-radius: 4px; margin: 15px 0; font-size: 0.9em;">
+            <strong>📦 Firmware Info:</strong> <span id="build-info">Loading...</span>
+        </div>
+        
+        <div class="info">
+            <strong>ℹ️ Requirements:</strong>
+            <ul>
+                <li>Chrome, Edge, or Opera browser (WebSerial support required)</li>
+                <li>Inkplate 10 or Inkplate 10 v2 device</li>
+                <li>USB connection to your device</li>
+            </ul>
+        </div>
+
+        <esp-web-install-button manifest="./manifest.json">
+            <button slot="activate" style="padding: 12px 24px; font-size: 16px; cursor: pointer; background: #2196F3; color: white; border: none; border-radius: 4px;">
+                Connect and Install
+            </button>
+        </esp-web-install-button>
+
+        <div class="warning">
+            <strong>⚠️ First Time Setup:</strong>
+            <ol>
+                <li>After flashing, create a <code>config.txt</code> file on the microSD card with your settings</li>
+                <li>Use the example configuration from <code>example-config.json</code> as a template</li>
+                <li>Insert the microSD card into your Inkplate device</li>
+                <li>Power cycle the device to load the configuration</li>
+            </ol>
+        </div>
+
+        <h2>Configuration</h2>
+        <p>The device can be configured via a <code>config.txt</code> file on the microSD card. Here's an example:</p>
+        
+        <pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto;"><code>{
+  "server": "https://your-server.com/image",
+  "ssid": "your_wifi_ssid",
+  "password": "your_wifi_password",
+  "sleepTime": 300,
+  "wifiTimeout": 30,
+  "httpTimeout": 15,
+  "showDebug": false,
+  "wakeButtonPin": 36,
+  "debugWindow": 10,
+  "otaEnabled": false,
+  "otaPort": 3232,
+  "otaPassword": "",
+  "otaTimeout": 30
+}</code></pre>
+
+        <h2>OTA Updates (Over-The-Air)</h2>
+        <p>After initial flashing, you can enable OTA updates in your config:</p>
+        <ol>
+            <li>Set <code>"otaEnabled": true</code> in your <code>config.txt</code></li>
+            <li>Optionally set an OTA password for security</li>
+            <li>The device will wait for OTA updates for the configured timeout period after each wake</li>
+            <li>Use PlatformIO to upload: <code>platformio run --target upload --upload-port &lt;IP_ADDRESS&gt;</code></li>
+        </ol>
+
+        <div class="info">
+            <strong>💡 Deep Sleep & OTA:</strong>
+            <p>Since the device sleeps most of the time, OTA updates work best when:</p>
+            <ul>
+                <li>The device is in debug mode (send "debug" command during the debug window)</li>
+                <li>You trigger an update during the OTA timeout window after each wake</li>
+                <li>You use the wake button to wake the device when you need to update</li>
+            </ul>
+        </div>
+
+        <h2>Resources</h2>
+        <ul>
+            <li><a href="https://github.com/alexdmejias/dashboard-client-inkplate">GitHub Repository</a></li>
+            <li><a href="https://github.com/alexdmejias/dashboard-client-inkplate/blob/main/docs/ESP_WEB_TOOLS_GUIDE.md">Flashing Guide</a></li>
+            <li><a href="https://github.com/alexdmejias/dashboard-client-inkplate/blob/main/docs/OTA_GUIDE.md">OTA Updates Guide</a></li>
+            <li><a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools Documentation</a></li>
+        </ul>
+    </div>
+    
+    <script>
+        // Load firmware info if available
+        fetch('./firmware-info.json')
+            .then(response => response.json())
+            .then(data => {
+                const buildDate = new Date(data.build_date).toLocaleString();
+                const sizeKB = (data.firmware_size / 1024).toFixed(2);
+                const shortCommit = data.git_commit ? data.git_commit.substring(0, 7) : 'unknown';
+                
+                document.getElementById('build-info').innerHTML = 
+                    `Version ${data.version} | Built: ${buildDate} | Size: ${sizeKB} KB | Commit: <code>${shortCommit}</code>`;
+            })
+            .catch(error => {
+                // If firmware-info.json doesn't exist (local development), show generic message
+                document.getElementById('build-info').textContent = 'Local development version';
+            });
+    </script>
+</body>
+</html>

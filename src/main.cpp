@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 #include "HTTPClient.h" //Include library for HTTPClient
 #include "WiFi.h"       //Include library for WiFi
+#include <ArduinoOTA.h> //Include library for OTA updates
 #include "fonts/FreeSans9pt7b.h"
 #include "fonts/FreeSans12pt7b.h"
 #include "fonts/FreeSans24pt7b.h"
@@ -33,6 +34,8 @@ const unsigned long touchpadCheckInterval = 100; // Check every 100 milliseconds
 #endif
 
 void connectToWifi(Inkplate &d, const char *ssid, const char *password, int wifiTimeout);
+void setupOTA(const Config &config);
+void handleOTA(const Config &config);
 void handleWakeup(Inkplate &d);
 void getImage(Inkplate &d, const char *server, int httpTimeout);
 bool waitForSerialDebugRequest(unsigned long windowMs);
@@ -77,6 +80,13 @@ void setup()
   {
     connectToWifi(display, config.ssid, config.password, config.wifiTimeout);
 
+    // Setup and handle OTA updates if enabled
+    if (config.otaEnabled)
+    {
+      setupOTA(config);
+      handleOTA(config);
+    }
+
     // setTime(display);
     // setTimezone(config.timezone);
     // // drawImage(display, config.server);
@@ -111,6 +121,12 @@ void setup()
 
 void loop()
 {
+  // Handle OTA updates in loop when in debug mode
+  if (inDebugMode && config.otaEnabled)
+  {
+    ArduinoOTA.handle();
+  }
+
 #if defined(ARDUINO_INKPLATE10)
   unsigned long currentMillis = millis();
   if (currentMillis - lastTouchpadCheckTime >= touchpadCheckInterval)
@@ -311,3 +327,96 @@ void getImage(Inkplate &d, const char *server, int httpTimeout)
 //   setenv("TZ", timezone, 1); //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
 //   tzset();
 // }
+
+void setupOTA(const Config &config)
+{
+  log("Setting up OTA...");
+  
+  // Set OTA hostname (based on chip ID for uniqueness)
+  String hostname = "inkplate-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+  ArduinoOTA.setHostname(hostname.c_str());
+  
+  // Set OTA port
+  ArduinoOTA.setPort(config.otaPort);
+  
+  // Set OTA password if provided
+  if (strlen(config.otaPassword) > 0)
+  {
+    ArduinoOTA.setPassword(config.otaPassword);
+    log("OTA password set");
+  }
+  
+  // Configure OTA callbacks
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+    {
+      type = "sketch";
+    }
+    else // U_SPIFFS
+    {
+      type = "filesystem";
+    }
+    log("OTA: Start updating " + type);
+  });
+  
+  ArduinoOTA.onEnd([]() {
+    log("\nOTA: Update complete");
+  });
+  
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("OTA Progress: %u%%\r", (progress / (total / 100)));
+  });
+  
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("OTA Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR)
+    {
+      log("OTA: Auth Failed");
+    }
+    else if (error == OTA_BEGIN_ERROR)
+    {
+      log("OTA: Begin Failed");
+    }
+    else if (error == OTA_CONNECT_ERROR)
+    {
+      log("OTA: Connect Failed");
+    }
+    else if (error == OTA_RECEIVE_ERROR)
+    {
+      log("OTA: Receive Failed");
+    }
+    else if (error == OTA_END_ERROR)
+    {
+      log("OTA: End Failed");
+    }
+  });
+  
+  ArduinoOTA.begin();
+  log("OTA initialized on port " + String(config.otaPort));
+  log("OTA hostname: " + hostname);
+}
+
+void handleOTA(const Config &config)
+{
+  if (config.otaTimeout <= 0)
+  {
+    return;
+  }
+  
+  log("Waiting for OTA updates for " + String(config.otaTimeout) + " seconds...");
+  log("To upload firmware, use: platformio run --target upload --upload-port <IP_ADDRESS>");
+  
+  unsigned long startTime = millis();
+  unsigned long timeoutMs = config.otaTimeout * 1000UL;
+  
+  // Use longer delays to reduce power consumption during OTA wait window
+  // ArduinoOTA.handle() only needs to be called frequently enough to detect incoming connections
+  while (millis() - startTime < timeoutMs)
+  {
+    ArduinoOTA.handle();
+    delay(250);  // 250ms delay is sufficient for OTA responsiveness while reducing power consumption
+  }
+  
+  log("OTA window closed");
+}

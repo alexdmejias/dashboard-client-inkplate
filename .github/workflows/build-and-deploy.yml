@@ -1,0 +1,188 @@
+name: Build Firmware and Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual trigger
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-firmware:
+    name: Build ESP32 Firmware
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            .pio
+          key: ${{ runner.os }}-platformio-${{ hashFiles('**/platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-platformio-
+      
+      - name: Install PlatformIO
+        run: |
+          pip install platformio
+          platformio --version
+      
+      - name: Build firmware
+        run: |
+          platformio run
+      
+      - name: Prepare firmware for web flashing
+        run: |
+          # Create a web directory for GitHub Pages
+          mkdir -p web
+          
+          # Copy the firmware binary
+          cp .pio/build/esp32/firmware.bin web/firmware.bin
+          
+          # Copy web flashing files
+          cp flash.html web/index.html
+          cp manifest.json web/manifest.json
+          
+          # Create a README for the web directory
+          cat > web/README.md << 'EOF'
+          # Inkplate Dashboard Client - Web Flasher
+          
+          This directory contains the files needed for web-based flashing using ESP Web Tools.
+          
+          ## Files:
+          - `index.html` - Web interface for flashing
+          - `manifest.json` - ESP Web Tools manifest
+          - `firmware.bin` - Compiled firmware binary
+          
+          ## Usage:
+          Visit the GitHub Pages URL for this repository to flash your device directly from your browser.
+          EOF
+          
+          # Get firmware size and create info file
+          FIRMWARE_SIZE=$(stat -f%z web/firmware.bin 2>/dev/null || stat -c%s web/firmware.bin)
+          FIRMWARE_SHA256=$(shasum -a 256 web/firmware.bin | cut -d' ' -f1)
+          BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          
+          cat > web/firmware-info.json << EOF
+          {
+            "version": "1.0.0",
+            "build_date": "$BUILD_DATE",
+            "firmware_size": $FIRMWARE_SIZE,
+            "firmware_sha256": "$FIRMWARE_SHA256",
+            "git_commit": "${{ github.sha }}",
+            "git_ref": "${{ github.ref }}"
+          }
+          EOF
+          
+          echo "Firmware build complete!"
+          echo "Size: $FIRMWARE_SIZE bytes"
+          echo "SHA256: $FIRMWARE_SHA256"
+      
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: |
+            .pio/build/esp32/firmware.bin
+            .pio/build/esp32/firmware.elf
+      
+      - name: Upload web artifacts for Pages
+        uses: actions/upload-artifact@v4
+        with:
+          name: github-pages-content
+          path: web/
+  
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build-firmware
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Download web artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages-content
+          path: web
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+  
+  create-release:
+    name: Create Release (on tags)
+    runs-on: ubuntu-latest
+    needs: build-firmware
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download firmware artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: firmware-files
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            firmware-files/firmware.bin
+            firmware-files/firmware.elf
+          body: |
+            ## Inkplate Dashboard Client Release
+            
+            ### Firmware Files
+            - `firmware.bin` - Main firmware binary for flashing
+            - `firmware.elf` - ELF file for debugging
+            
+            ### Flashing Methods
+            
+            #### Option 1: ESP Web Tools (Easiest)
+            Visit the [Web Flasher](https://alexdmejias.github.io/dashboard-client-inkplate/) and follow the instructions.
+            
+            #### Option 2: PlatformIO Serial
+            ```bash
+            platformio run --target upload
+            ```
+            
+            #### Option 3: OTA Update
+            ```bash
+            platformio run --target upload --upload-port <DEVICE_IP>
+            ```
+            
+            See the [documentation](https://github.com/alexdmejias/dashboard-client-inkplate) for more details.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
