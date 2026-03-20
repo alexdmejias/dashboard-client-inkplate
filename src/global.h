@@ -17,6 +17,10 @@ struct Config
     char timezone[64];
     int wakeButtonPin;
     int debugWindow;
+    bool otaEnabled;           // Enable OTA updates
+    int otaPort;               // OTA port (default: 3232)
+    char otaPassword[64];      // OTA password (optional, for security)
+    int otaTimeout;            // Seconds to wait for OTA before sleep (default: 30)
 };
 
 void log(String msg);
