@@ -410,10 +410,12 @@ void handleOTA(const Config &config)
   unsigned long startTime = millis();
   unsigned long timeoutMs = config.otaTimeout * 1000UL;
   
+  // Use longer delays to reduce power consumption during OTA wait window
+  // ArduinoOTA.handle() only needs to be called frequently enough to detect incoming connections
   while (millis() - startTime < timeoutMs)
   {
     ArduinoOTA.handle();
-    delay(10);
+    delay(250);  // 250ms delay is sufficient for OTA responsiveness while reducing power consumption
   }
   
   log("OTA window closed");
