@@ -42,16 +42,36 @@ log("CPU frequency reduced to 80 MHz for power saving");
 ```cpp
 // At end of getImage() function
 http.end();
-WiFi.disconnect(true);
-WiFi.mode(WIFI_OFF);
-log("WiFi disabled for power saving");
+shutdownWiFi();
 ```
 
 **Why:** Ensures WiFi is completely powered off before deep sleep, preventing residual power consumption.
 
 **Impact:** Saves 70-100 mA during deep sleep if WiFi was left in low-power mode.
 
-### 4. WiFi Shutdown on Error Path (src/global.cpp)
+### 4. WiFi Shutdown Helper Function (src/global.cpp, src/global.h)
+
+**What:** Create a reusable function for WiFi shutdown to avoid code duplication.
+
+**Code:**
+```cpp
+// In src/global.h
+void shutdownWiFi();
+
+// In src/global.cpp
+void shutdownWiFi()
+{
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    log("WiFi disabled for power saving");
+}
+```
+
+**Why:** Consolidates WiFi shutdown logic in one place, making the code more maintainable and ensuring consistent behavior.
+
+**Used in:** Both `getImage()` and `stopProgram()` functions.
+
+### 5. WiFi Shutdown on Error Path (src/global.cpp)
 
 **What:** Ensure WiFi is disabled even when stopping due to errors.
 
@@ -60,12 +80,7 @@ log("WiFi disabled for power saving");
 void stopProgram(Inkplate &d)
 {
     d.display();
-    
-    // Ensure WiFi is disabled before sleep to save power
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
-    log("WiFi disabled before sleep");
-    
+    shutdownWiFi();
     d.sdCardSleep();
     handleSleep(3001, 36);
 }
@@ -91,7 +106,7 @@ The following battery-saving features were already in the codebase:
 
 ### Before Optimizations
 - Active current: ~200-250 mA
-- Sleep current: ~10-150 µA (could be 70-100 mA if WiFi not properly disabled)
+- Sleep current: ~10-100 µA (could be 70-100 mA if WiFi not properly disabled)
 - With 5-minute refresh: ~9-10 days on 3000 mAh battery
 
 ### After Optimizations

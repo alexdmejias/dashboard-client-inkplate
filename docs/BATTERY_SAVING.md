@@ -7,7 +7,7 @@ This document describes the battery saving features implemented in the Inkplate 
 ### 1. Deep Sleep Mode
 **Primary Power Saving Strategy**
 - Uses ESP32's deep sleep mode via `esp_deep_sleep_start()`
-- Power consumption in deep sleep: ~10-150 µA (microamps)
+- Power consumption in deep sleep: ~10-100 µA (microamps)
 - All peripherals except RTC are powered down
 - Device wakes only on configured triggers
 
@@ -168,8 +168,8 @@ To measure actual power consumption:
    - Test setup with current measurement in battery line
 
 2. **Measurement Points**
-   - Deep sleep current (should be <150 µA)
-   - Active current during image fetch (150-250 mA)
+   - Deep sleep current (should be <100 µA)
+   - Active current during image fetch (150-200 mA)
    - Peak current during display update (200-300 mA)
 
 3. **Validation**
