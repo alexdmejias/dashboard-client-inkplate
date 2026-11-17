@@ -13,6 +13,7 @@
 #include "fonts/FreeSans12pt7b.h"
 #include "fonts/FreeSans24pt7b.h"
 #include "driver/rtc_io.h"
+#include "esp_task_wdt.h"
 #include "time.h"
 #include "global.h"
 #include "draw.h"
@@ -32,7 +33,7 @@ unsigned long lastTouchpadCheckTime = 0;
 const unsigned long touchpadCheckInterval = 100; // Check every 100 milliseconds
 #endif
 
-void connectToWifi(Inkplate &d, const char *ssid, const char *password, int wifiTimeout);
+void connectToWifi(Inkplate &d, const char *ssid, const char *password, int wifiTimeout, int wakeButtonPin);
 void handleWakeup(Inkplate &d);
 void getImage(Inkplate &d, const char *server, int httpTimeout);
 bool waitForSerialDebugRequest(unsigned long windowMs);
@@ -44,6 +45,10 @@ void setup()
   display.begin(); // Init Inkplate library (you should call this function ONLY ONCE)
 
   Serial.begin(115200);
+
+  // Initialize Task Watchdog Timer (60s) to automatically reboot if any operation hangs
+  esp_task_wdt_init(60, true);
+  esp_task_wdt_add(NULL);
 
 #if defined(ARDUINO_INKPLATE10)
   display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
@@ -75,11 +80,13 @@ void setup()
   }
   else
   {
-    connectToWifi(display, config.ssid, config.password, config.wifiTimeout);
+    esp_task_wdt_reset();
+    connectToWifi(display, config.ssid, config.password, config.wifiTimeout, config.wakeButtonPin);
 
     // setTime(display);
     // setTimezone(config.timezone);
     // // drawImage(display, config.server);
+    esp_task_wdt_reset();
     getImage(display, config.server, config.httpTimeout);
 
     if (config.showDebug)
@@ -105,12 +112,15 @@ void setup()
       log("Sleep duration: " + String(sleepDuration) + "s (hardcoded default)");
     }
 
+    display.sdCardSleep();
+    esp_task_wdt_delete(NULL);
     handleSleep(sleepDuration, config.wakeButtonPin);
   }
 }
 
 void loop()
 {
+  esp_task_wdt_reset();
 #if defined(ARDUINO_INKPLATE10)
   unsigned long currentMillis = millis();
   if (currentMillis - lastTouchpadCheckTime >= touchpadCheckInterval)
@@ -168,6 +178,7 @@ bool waitForSerialDebugRequest(unsigned long windowMs)
   unsigned long start = millis();
   while (millis() - start < windowMs)
   {
+    esp_task_wdt_reset();
     if (Serial.available())
     {
       String command = Serial.readStringUntil('\n');
@@ -188,7 +199,7 @@ bool waitForSerialDebugRequest(unsigned long windowMs)
   return false;
 }
 
-void connectToWifi(Inkplate &d, const char *ssid, const char *password, int wifiTimeout)
+void connectToWifi(Inkplate &d, const char *ssid, const char *password, int wifiTimeout, int wakeButtonPin)
 {
   log("Connecting to WiFi...");
   bool connectedToWifi = d.connectWiFi(ssid, password, wifiTimeout, true);
@@ -196,7 +207,7 @@ void connectToWifi(Inkplate &d, const char *ssid, const char *password, int wifi
   {
     log("Failed to connect to WiFi");
     drawErrorMessage(d, String("Error: Failed to connect to WiFi. SSID: ") + ssid, "Check SSID and password in config.txt");
-    stopProgram(d);
+    stopProgram(d, wakeButtonPin);
   }
 
   log("Connected to WiFi");
@@ -208,18 +219,12 @@ void getImage(Inkplate &d, const char *server, int httpTimeout)
   log("HTTP timeout: " + String(httpTimeout) + " seconds");
 
   HTTPClient http;
-  // Set parameters to speed up the download process.
-  http.getStream().setNoDelay(true);
-
-  // setTimeout expects milliseconds; httpTimeout is in seconds
-  http.getStream().setTimeout(httpTimeout * 1000UL);
-  // Also set the HTTPClient-level timeout (milliseconds) for connection and response headers
-  http.setTimeout(httpTimeout * 1000);
 
   const char *headerKeys[] = {"x-sleep-for"};
   const size_t numberOfHeaders = 1;
 
   http.begin(server);
+  http.setTimeout(httpTimeout * 1000);
   http.collectHeaders(headerKeys, numberOfHeaders);
 
   // Check response code.
@@ -228,6 +233,10 @@ void getImage(Inkplate &d, const char *server, int httpTimeout)
 
   if (httpCode == 200)
   {
+    // Configure socket stream now that the connection exists
+    http.getStream().setNoDelay(true);
+    http.getStream().setTimeout(httpTimeout * 1000UL);
+
     // Get the response length; -1 means Content-Length was not provided (e.g. chunked transfer)
     int32_t len = http.getSize();
     log("Response size: " + (len >= 0 ? String(len) + " bytes" : String("unknown (chunked)")));
@@ -239,20 +248,23 @@ void getImage(Inkplate &d, const char *server, int httpTimeout)
       log("x-sleep-for header: " + sleepForHeader + " (sleepFor=" + String(sleepFor) + ")");
     }
 
-    if (len != 0)
+    if (len > 0)
     {
-      if (!drawImageFromClient(d, http, len))
+      if (!drawImageFromClient(d, http, len, httpTimeout))
       {
-        // If something failed (wrong filename or wrong bitmap format), write error message on the screen.
-        // REMEMBER! You can only use Windows Bitmap file with color depth of 1, 4, 8 or 24 bits with no
-        // compression!
-        d.println("Image open error");
+        log("Image decode or download failed");
+        drawErrorMessage(d, "Error: Could not render image", "Check server image format or connection");
       }
     }
-    else
+    else if (len == 0)
     {
       log("Invalid response length: 0 bytes");
       drawErrorMessage(d, "Error: Empty response from server", "Check server is returning a valid image");
+    }
+    else
+    {
+      log("Chunked transfer or unknown content length not supported by Inkplate");
+      drawErrorMessage(d, "Error: Chunked response", "Server must send Content-Length header");
     }
   }
   else
@@ -265,6 +277,8 @@ void getImage(Inkplate &d, const char *server, int httpTimeout)
     }
     handleHttpError(d, httpCode, payload);
   }
+
+  http.end();
 }
 
 // void setTime(Inkplate &d)

@@ -32,7 +32,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
         { // If it fails to open, send error message to display, otherwise read the file.
             log("File open error");
             drawErrorMessage(d, "Error: Could not open file", "Ensure file exists on SD card root");
-            stopProgram(d);
+            stopProgram(d, defaultConfig.wakeButtonPin);
         }
         else
         {
@@ -56,7 +56,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
             {
                 log("Missing required config values or incorrect type");
                 drawErrorMessage(d, "Error: Missing required config values or incorrect type", "Verify server, ssid, password fields");
-                stopProgram(d);
+                stopProgram(d, defaultConfig.wakeButtonPin);
             }
             strlcpy(config.server, doc["server"], sizeof(config.server));
             strlcpy(config.ssid, doc["ssid"], sizeof(config.ssid));
@@ -92,7 +92,7 @@ void readConfig(Inkplate &d, const char *filename, Config &config)
     {
         log("SD Card error!");
         drawErrorMessage(d, "Error: SD Card error", "Check SD card is inserted properly");
-        stopProgram(d);
+        stopProgram(d, defaultConfig.wakeButtonPin);
     }
 }
 

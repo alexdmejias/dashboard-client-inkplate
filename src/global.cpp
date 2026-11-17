@@ -1,5 +1,8 @@
 #include "global.h"
 #include "esp_sleep.h"
+#include "WiFi.h"
+#include "esp_wifi.h"
+
 #define uS_TO_S_FACTOR 1000000ULL /* Conversion factor for micro seconds to seconds */
 
 void log(String msg)
@@ -7,11 +10,11 @@ void log(String msg)
     Serial.println("::::::::::: " + String(msg));
 }
 
-void stopProgram(Inkplate &d)
+void stopProgram(Inkplate &d, int wakeButtonPin)
 {
     d.display();
     d.sdCardSleep();
-    handleSleep(3001, 36); // Use default GPIO 36 for wake button
+    handleSleep(3001, wakeButtonPin);
 }
 
 void handleSleep(int time, int wakeButtonPin)
@@ -36,6 +39,12 @@ void handleSleep(int time, int wakeButtonPin)
         }
     }
     
+    // Cleanly shut down WiFi so the AP does not hold stale connection state
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    esp_wifi_stop();
+    delay(50);
+
     log("Going to sleep for " + String(time) + " seconds");
     Serial.flush();
     esp_deep_sleep_start(); // Put ESP32 into deep sleep. Program stops here.

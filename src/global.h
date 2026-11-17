@@ -20,5 +20,5 @@ struct Config
 };
 
 void log(String msg);
-void stopProgram(Inkplate &d);
-void handleSleep(int time, int wakeButtonPin);
+void stopProgram(Inkplate &d, int wakeButtonPin = 36);
+void handleSleep(int time, int wakeButtonPin = 36);
