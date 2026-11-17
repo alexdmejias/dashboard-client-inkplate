@@ -67,17 +67,149 @@ void drawImage(Inkplate &d, const char *server)
     log("Image displayed");
 }
 
-bool drawImageFromClient(Inkplate &d, HTTPClient &httpClient, int32_t len)
+// Wrapper class around WiFiClient to protect against infinite loops in Inkplate's
+// downloadFile(WiFiClient *s, int32_t len) if the socket disconnects or stalls mid-transfer.
+class SafeWiFiClientWrapper : public WiFiClient
+{
+private:
+    WiFiClient *_client;
+    unsigned long _timeoutMs;
+    unsigned long _lastReadTime;
+    bool _timedOut;
+    int32_t _remaining;
+
+public:
+    SafeWiFiClientWrapper(WiFiClient *client, unsigned long timeoutMs, int32_t expectedLen)
+        : _client(client),
+          _timeoutMs(timeoutMs),
+          _lastReadTime(millis()),
+          _timedOut(false),
+          _remaining(expectedLen)
+    {
+    }
+
+    bool hasTimedOut() const
+    {
+        return _timedOut;
+    }
+
+    int available() override
+    {
+        if (_timedOut)
+        {
+            // Drain remaining bytes immediately so downloadFile's while (len > 0) loop exits cleanly
+            return (_remaining > 0) ? ((_remaining > 128) ? 128 : _remaining) : 0;
+        }
+
+        if (!_client)
+        {
+            _timedOut = true;
+            return (_remaining > 0) ? ((_remaining > 128) ? 128 : _remaining) : 0;
+        }
+
+        int avail = _client->available();
+        if (avail > 0)
+        {
+            _lastReadTime = millis();
+            return avail;
+        }
+
+        // Check if socket was closed or read has timed out
+        if (!_client->connected() || (millis() - _lastReadTime > _timeoutMs))
+        {
+            log("SafeWiFiClientWrapper: Socket closed or timeout reading image stream!");
+            _timedOut = true;
+            return (_remaining > 0) ? ((_remaining > 128) ? 128 : _remaining) : 0;
+        }
+
+        return 0;
+    }
+
+    int read() override
+    {
+        if (_timedOut)
+        {
+            if (_remaining > 0)
+                _remaining--;
+            return 0;
+        }
+        if (!_client)
+            return -1;
+        int b = _client->read();
+        if (b >= 0)
+        {
+            _lastReadTime = millis();
+            if (_remaining > 0)
+                _remaining--;
+        }
+        return b;
+    }
+
+    int read(uint8_t *buf, size_t size) override
+    {
+        if (_timedOut)
+        {
+            size_t toDrain = (_remaining > 0) ? min((size_t)_remaining, size) : 0;
+            if (toDrain > 0)
+            {
+                memset(buf, 0, toDrain);
+                _remaining -= toDrain;
+                return toDrain;
+            }
+            return 0;
+        }
+        if (!_client)
+            return -1;
+        int bytesRead = _client->read(buf, size);
+        if (bytesRead > 0)
+        {
+            _lastReadTime = millis();
+            if (_remaining > 0)
+                _remaining -= bytesRead;
+        }
+        return bytesRead;
+    }
+
+    uint8_t connected() override
+    {
+        return (_client && !_timedOut) ? _client->connected() : 0;
+    }
+
+    void stop() override
+    {
+        if (_client)
+            _client->stop();
+    }
+};
+
+bool drawImageFromClient(Inkplate &d, HTTPClient &httpClient, int32_t len, int httpTimeout)
 {
     log("Will display image now");
 
-    if (!d.drawPngFromWeb(httpClient.getStreamPtr(), 0, 0, len, true, false))
+    if (len <= 0)
     {
-        log("Image open error");
-        // drawErrorMessage(d, "Error: Could not draw image");
+        log("Invalid image length: " + String(len));
         return false;
     }
-    log("Image displayed");
 
+    unsigned long timeoutMs = (httpTimeout > 0) ? (static_cast<unsigned long>(httpTimeout) * 1000UL) : 15000UL;
+    WiFiClient *rawClient = httpClient.getStreamPtr();
+    SafeWiFiClientWrapper safeClient(rawClient, timeoutMs, len);
+
+    bool result = d.drawPngFromWeb(&safeClient, 0, 0, len, true, false);
+
+    if (safeClient.hasTimedOut())
+    {
+        log("Image download failed due to timeout or socket disconnect");
+        return false;
+    }
+
+    if (!result)
+    {
+        log("Image open error (corrupt or unsupported format)");
+        return false;
+    }
+
+    log("Image displayed");
     return true;
 }
